@@ -1,9 +1,9 @@
 // components/CameraHome.tsx
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import dynamic from "next/dynamic";
-import { Zap, RefreshCw, Image as ImageIcon, ChevronDown, Sparkles, MapPin, Navigation, Lock, Map } from "lucide-react";
+import { RefreshCw, Image as ImageIcon, ChevronDown, Sparkles, MapPin, Navigation, Lock, Map, Camera } from "lucide-react";
 import { MemoryItem } from "./AddMemoryModal";
 // @ts-ignore
 import heic2any from "heic2any";
@@ -25,13 +25,10 @@ interface CameraHomeProps {
 }
 
 export default function CameraHome({ memories, onAddMemory, onNavigateTab, onShowToast }: CameraHomeProps) {
-  const videoRef = useRef<HTMLVideoElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const captureInputRef = useRef<HTMLInputElement | null>(null);
   
-  const [facingMode, setFacingMode] = useState<"user" | "environment">("user");
-  const [zoomLevel, setZoomLevel] = useState<number>(1);
-  const [maxZoom, setMaxZoom] = useState<number>(3); 
-  const [isFlashActive, setIsFlashActive] = useState<boolean>(false);
+  const [facingMode, setFacingMode] = useState<"environment" | "user">("environment");
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   
   const [caption, setCaption] = useState<string>("");
@@ -41,179 +38,21 @@ export default function CameraHome({ memories, onAddMemory, onNavigateTab, onSho
   const [isGettingGPS, setIsGettingGPS] = useState<boolean>(false);
   const [isSaving, setIsSaving] = useState<boolean>(false);
 
-  const triggerFlashBurst = async () => {
-    try {
-      if (videoRef.current && videoRef.current.srcObject) {
-        const stream = videoRef.current.srcObject as MediaStream;
-        const track = stream.getVideoTracks()[0];
-        const capabilities = track.getCapabilities() as any;
-        
-        if (capabilities && capabilities.torch) {
-          await track.applyConstraints({
-            advanced: [{ torch: true } as any]
-          });
-          
-          setTimeout(async () => {
-            try {
-              await track.applyConstraints({
-                advanced: [{ torch: false } as any]
-              });
-            } catch (e) {}
-          }, 300);
-        }
-      }
-    } catch (err) {
-      console.error("Gagal menjalankan flash burst:", err);
-    }
-  };
-
-  const applyHardwareZoom = async (newZoom: number) => {
-    try {
-      if (videoRef.current && videoRef.current.srcObject) {
-        const stream = videoRef.current.srcObject as MediaStream;
-        const track = stream.getVideoTracks()[0];
-        const capabilities = track.getCapabilities() as any;
-
-        if (capabilities && capabilities.zoom) {
-          await track.applyConstraints({
-            advanced: [{ zoom: newZoom } as any]
-          });
-          setZoomLevel(newZoom);
-        } else {
-          setZoomLevel(newZoom);
-        }
-      }
-    } catch (err) {
-      console.error("Gagal mengubah zoom hardware:", err);
-    }
-  };
-
-  useEffect(() => {
-    let activeStream: MediaStream | null = null;
-
-    async function initCamera() {
-      try {
-        if (videoRef.current && videoRef.current.srcObject) {
-          const oldStream = videoRef.current.srcObject as MediaStream;
-          oldStream.getTracks().forEach((track) => track.stop());
-        }
-
-        activeStream = await navigator.mediaDevices.getUserMedia({
-          video: { 
-            facingMode: facingMode,
-            zoom: true,
-          } as any,
-          audio: false,
-        });
-
-        if (videoRef.current) {
-          videoRef.current.srcObject = activeStream;
-        }
-
-        const track = activeStream.getVideoTracks()[0];
-        const capabilities = track.getCapabilities() as any;
-        if (capabilities && capabilities.zoom) {
-          setMaxZoom(capabilities.zoom.max || 5);
-        }
-      } catch (err) {
-        try {
-          activeStream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: facingMode },
-            audio: false,
-          });
-          if (videoRef.current) {
-            videoRef.current.srcObject = activeStream;
-          }
-        } catch (fallbackErr) {
-          onShowToast("⚠️️ Tidak dapat mengakses kamera perangkat.");
-        }
-      }
-    }
-
-    if (!capturedImage) {
-      initCamera();
-    }
-
-    return () => {
-      if (activeStream) {
-        activeStream.getTracks().forEach((track) => track.stop());
-      }
-      if (videoRef.current && videoRef.current.srcObject) {
-        const stream = videoRef.current.srcObject as MediaStream;
-        stream.getTracks().forEach((track) => track.stop());
-        videoRef.current.srcObject = null;
-      }
-    };
-  }, [facingMode, capturedImage]);
-
-  const handleCapture = async () => {
-    if (!videoRef.current) return;
-
-    // 1. Jika flash aktif, nyalakan flash fisik terlebih dahulu
-    if (isFlashActive && facingMode === "environment") {
-      try {
-        const stream = videoRef.current.srcObject as MediaStream;
-        const track = stream.getVideoTracks()[0];
-        const capabilities = track.getCapabilities() as any;
-        if (capabilities && capabilities.torch) {
-          await track.applyConstraints({
-            advanced: [{ torch: true } as any]
-          });
-        }
-      } catch (err) {
-        console.error("Gagal menyalakan flash:", err);
-      }
-      
-      // Beri jeda 300ms agar cahaya flash sempat menerangi objek dan kamera mengunci fokus
-      onShowToast("⚡ Menyalakan flash & mengunci fokus...");
-      await new Promise((resolve) => setTimeout(resolve, 300));
-    }
-
-    // 2. Ambil gambar saat flash SEDANG NYALA TERANG
-    const video = videoRef.current;
-    const canvas = document.createElement("canvas");
-    canvas.width = video.videoWidth || 1920;
-    canvas.height = video.videoHeight || 1080;
-    const ctx = canvas.getContext("2d");
-    
-    if (ctx) {
-      if (facingMode === "user") {
-        ctx.translate(canvas.width, 0);
-        ctx.scale(-1, 1);
-      }
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      const imageUrl = canvas.toDataURL("image/jpeg", 1.0);
-      setCapturedImage(imageUrl);
-    }
-
-    // 3. Setelah foto berhasil diambil, matikan kembali flash fisiknya
-    if (isFlashActive && facingMode === "environment") {
-      try {
-        const stream = videoRef.current.srcObject as MediaStream;
-        const track = stream.getVideoTracks()[0];
-        await track.applyConstraints({
-          advanced: [{ torch: false } as any]
-        });
-      } catch (err) {
-        console.error("Gagal mematikan flash:", err);
-      }
-    }
-  };
-
-  const handleGalleryUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Proses gambar baik dari Kamera Native maupun Galeri (Termasuk konversi iPhone HEIC)
+  const processImageFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     let fileToProcess = file;
 
     if (file.type === "image/heic" || file.name.toLowerCase().endsWith(".heic")) {
-      onShowToast("🔄 Mengonversi foto iPhone (.heic)...");
+      onShowToast("🔄 Mengonversi foto resolusi tinggi...");
       try {
         const heic2any = (await import("heic2any")).default;
         const convertedBlob = await heic2any({
           blob: file,
           toType: "image/jpeg",
-          quality: 0.8,
+          quality: 1.0, // Kualitas maksimal
         });
         
         const conversionResult = Array.isArray(convertedBlob) ? convertedBlob[0] : convertedBlob;
@@ -222,7 +61,7 @@ export default function CameraHome({ memories, onAddMemory, onNavigateTab, onSho
         });
       } catch (err) {
         console.error("Gagal konversi HEIC:", err);
-        onShowToast("⚠️ Gagal memproses foto iPhone.");
+        onShowToast("⚠️ Gagal memproses foto.");
         return;
       }
     }
@@ -230,22 +69,14 @@ export default function CameraHome({ memories, onAddMemory, onNavigateTab, onSho
     const reader = new FileReader();
     reader.onloadend = () => {
       setCapturedImage(reader.result as string);
+      onShowToast("✅ Foto berhasil diambil!");
     };
     reader.readAsDataURL(fileToProcess);
   };
 
   const handleSwitchCamera = () => {
-    setFacingMode((prev) => (prev === "user" ? "environment" : "user"));
-    setZoomLevel(1);
-    onShowToast(facingMode === "user" ? "🔄 Beralih ke Kamera Belakang" : "🔄 Beralih ke Kamera Depan");
-  };
-
-  const handleToggleZoom = async () => {
-    let nextZoom = zoomLevel + 1;
-    if (nextZoom > Math.min(maxZoom, 4)) {
-      nextZoom = 1;
-    }
-    await applyHardwareZoom(nextZoom);
+    setFacingMode((prev) => (prev === "environment" ? "user" : "environment"));
+    onShowToast(facingMode === "environment" ? "🔄 Beralih ke Kamera Depan" : "🔄 Beralih ke Kamera Belakang");
   };
 
   const handleGetCurrentLocation = () => {
@@ -266,7 +97,7 @@ export default function CameraHome({ memories, onAddMemory, onNavigateTab, onSho
       },
       () => {
         setIsGettingGPS(false);
-        onShowToast("⚠️ Gagal mengambil lokasi GPS. Pastikan izin GPS di HP sudah aktif.");
+        onShowToast("⚠️️ Gagal mengambil lokasi GPS. Pastikan izin GPS di HP sudah aktif.");
       },
       { enableHighAccuracy: true, timeout: 10000 }
     );
@@ -318,58 +149,45 @@ export default function CameraHome({ memories, onAddMemory, onNavigateTab, onSho
   return (
     <div className="w-full max-w-sm mx-auto px-4 pb-24 flex flex-col items-center justify-between min-h-[75vh]">
       
-      {/* JENDELA KAMERA UTAMA (PERSEGI 1x1, AMAN DARI BOTTOM NAV) */}
-      <div className="relative w-full aspect-square max-h-[54vh] bg-black rounded-[36px] overflow-hidden shadow-2xl border border-white/10 flex items-center justify-center my-1">
+      {/* INPUT TERSEMBUNYI UNTUK NATIVE CAMERA & GALERI */}
+      {/* Tombol ini akan otomatis membuka kamera bawaan sistem HP tanpa nanya izin browser */}
+      <input 
+        type="file" 
+        accept="image/*" 
+        capture={facingMode} 
+        ref={captureInputRef} 
+        onChange={processImageFile} 
+        className="hidden" 
+      />
+      
+      <input 
+        type="file" 
+        accept="image/*,.heic,.HEIC" 
+        ref={fileInputRef} 
+        onChange={processImageFile} 
+        className="hidden" 
+      />
+
+      {/* JENDELA PREVIEW UTAMA (PERSEGI 1x1) */}
+      <div 
+        onClick={() => !capturedImage && captureInputRef.current?.click()}
+        className={`relative w-full aspect-square max-h-[54vh] bg-black rounded-[36px] overflow-hidden shadow-2xl border border-white/10 flex items-center justify-center my-1 ${!capturedImage ? 'cursor-pointer active:scale-[0.98] transition-transform' : ''}`}
+      >
         {!capturedImage ? (
-          <video
-            ref={videoRef}
-            autoPlay
-            playsInline
-            muted
-            className="w-full h-full object-cover transition-transform duration-300"
-            style={{ transform: `${facingMode === "user" ? "scaleX(-1)" : "scaleX(1)"}` }}
-          />
+          <div className="flex flex-col items-center justify-center space-y-4 opacity-60">
+            <div className="w-20 h-20 rounded-full border-2 border-slate-600 flex items-center justify-center bg-slate-800/50">
+              <Camera className="w-8 h-8 text-slate-400" />
+            </div>
+            <p className="text-xs font-medium text-slate-400 tracking-wide">Ketuk untuk Buka Kamera Bawaan HP</p>
+          </div>
         ) : (
           <img src={capturedImage} alt="Captured" className="w-full h-full object-cover" />
-        )}
-
-        {!capturedImage && (
-          <div className="absolute top-4 left-4 right-4 flex items-center justify-between z-20">
-            <button
-              onClick={() => {
-                const nextState = !isFlashActive;
-                setIsFlashActive(nextState);
-                onShowToast(nextState ? "⚡ Flash Auto/Jepret Aktif" : "⚡ Flash Dimatikan");
-              }}
-              className={`p-3 rounded-full backdrop-blur-md transition shadow-lg border cursor-pointer ${
-                isFlashActive 
-                  ? "bg-sky-500 text-white border-sky-400 shadow-sky-500/50" 
-                  : "bg-black/40 text-white border-white/10"
-              }`}
-            >
-              <Zap className="w-4 h-4 fill-current" />
-            </button>
-
-            <button
-              onClick={handleToggleZoom}
-              className="px-3.5 py-1.5 rounded-full bg-black/40 backdrop-blur-md text-white text-xs font-bold border border-white/10 shadow-lg flex items-center gap-1 cursor-pointer"
-            >
-              {zoomLevel}x
-            </button>
-          </div>
         )}
       </div>
 
       {/* KONTROL BAWAH KAMERA */}
       {!capturedImage ? (
         <div className="w-full flex items-center justify-around pt-2 pb-2 px-4">
-          <input 
-            type="file" 
-            ref={fileInputRef} 
-            onChange={handleGalleryUpload} 
-            accept="image/*,.heic,.HEIC" 
-            className="hidden" 
-          />
           <button
             onClick={() => fileInputRef.current?.click()}
             className="w-12 h-12 rounded-2xl bg-slate-800/80 hover:bg-slate-700 flex items-center justify-center border border-white/10 shadow-lg text-white transition cursor-pointer"
@@ -379,16 +197,18 @@ export default function CameraHome({ memories, onAddMemory, onNavigateTab, onSho
           </button>
 
           <button
-            onClick={handleCapture}
+            onClick={() => captureInputRef.current?.click()}
             className="w-18 h-18 rounded-full border-4 border-sky-500 flex items-center justify-center p-1 shadow-2xl active:scale-95 transition cursor-pointer bg-black/20 shadow-sky-500/30"
           >
-            <div className="w-full h-full bg-white rounded-full hover:bg-slate-200 transition" />
+            <div className="w-full h-full bg-white rounded-full hover:bg-slate-200 transition flex items-center justify-center">
+              <Camera className="w-6 h-6 text-slate-800" />
+            </div>
           </button>
 
           <button
             onClick={handleSwitchCamera}
             className="w-12 h-12 rounded-2xl bg-slate-800/80 hover:bg-slate-700 flex items-center justify-center border border-white/10 shadow-lg text-white transition cursor-pointer"
-            title="Putar Kamera"
+            title={`Mode Kamera: ${facingMode === "environment" ? "Belakang" : "Depan"}`}
           >
             <RefreshCw className="w-5 h-5 text-sky-400" />
           </button>
