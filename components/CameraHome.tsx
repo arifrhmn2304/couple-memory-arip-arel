@@ -11,7 +11,7 @@ import heic2any from "heic2any";
 const InteractivePickerMap = dynamic(() => import("./InteractivePickerMap"), {
   ssr: false,
   loading: () => (
-    <div className="w-full h-40 bg-slate-950 rounded-2xl flex items-center justify-center text-xs text-sky-400 font-medium animate-pulse border border-sky-500/20">
+    <div className="w-full h-32 bg-slate-950 rounded-2xl flex items-center justify-center text-xs text-sky-400 font-medium animate-pulse border border-sky-500/20">
       Memuat Peta Interaktif... 🗺️
     </div>
   ),
@@ -31,7 +31,7 @@ export default function CameraHome({ memories, onAddMemory, onNavigateTab, onSho
   const [facingMode, setFacingMode] = useState<"user" | "environment">("user");
   const [zoomLevel, setZoomLevel] = useState<number>(1);
   const [maxZoom, setMaxZoom] = useState<number>(3); 
-  const [isFlashActive, setIsFlashActive] = useState<boolean>(false); // Status mode flash aktif/mati
+  const [isFlashActive, setIsFlashActive] = useState<boolean>(false);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   
   const [caption, setCaption] = useState<string>("");
@@ -41,7 +41,6 @@ export default function CameraHome({ memories, onAddMemory, onNavigateTab, onSho
   const [isGettingGPS, setIsGettingGPS] = useState<boolean>(false);
   const [isSaving, setIsSaving] = useState<boolean>(false);
 
-  // Fungsi untuk menyalakan/mematikan flash fisik sesaat
   const triggerFlashBurst = async () => {
     try {
       if (videoRef.current && videoRef.current.srcObject) {
@@ -50,12 +49,10 @@ export default function CameraHome({ memories, onAddMemory, onNavigateTab, onSho
         const capabilities = track.getCapabilities() as any;
         
         if (capabilities && capabilities.torch) {
-          // Nyalakan flash
           await track.applyConstraints({
             advanced: [{ torch: true } as any]
           });
           
-          // Matikan kembali setelah 300ms (0.3 detik) agar seperti efek jepretan kamera asli
           setTimeout(async () => {
             try {
               await track.applyConstraints({
@@ -70,7 +67,6 @@ export default function CameraHome({ memories, onAddMemory, onNavigateTab, onSho
     }
   };
 
-  // Fungsi untuk mengatur Hardware Zoom Kamera HP
   const applyHardwareZoom = async (newZoom: number) => {
     try {
       if (videoRef.current && videoRef.current.srcObject) {
@@ -92,7 +88,6 @@ export default function CameraHome({ memories, onAddMemory, onNavigateTab, onSho
     }
   };
 
-  // Inisialisasi Kamera Fisik & Deteksi Kapasitas Zoom HP
   useEffect(() => {
     let activeStream: MediaStream | null = null;
 
@@ -130,7 +125,7 @@ export default function CameraHome({ memories, onAddMemory, onNavigateTab, onSho
             videoRef.current.srcObject = activeStream;
           }
         } catch (fallbackErr) {
-          onShowToast("⚠️ Tidak dapat mengakses kamera perangkat.");
+          onShowToast("⚠️️ Tidak dapat mengakses kamera perangkat.");
         }
       }
     }
@@ -154,10 +149,8 @@ export default function CameraHome({ memories, onAddMemory, onNavigateTab, onSho
   const handleCapture = async () => {
     if (!videoRef.current) return;
 
-    // Jika mode flash aktif, nyalakan flash fisik sesaat sebelum gambar diambil
     if (isFlashActive && facingMode === "environment") {
       await triggerFlashBurst();
-      // Beri sedikit jeda agar lampu sempat menyala terang saat canvas mengambil gambar
       await new Promise((resolve) => setTimeout(resolve, 100));
     }
 
@@ -294,10 +287,10 @@ export default function CameraHome({ memories, onAddMemory, onNavigateTab, onSho
   };
 
   return (
-    <div className="w-full max-w-sm mx-auto px-4 pb-36 flex flex-col items-center justify-between min-h-[75vh]">
+    <div className="w-full max-w-sm mx-auto px-4 pb-24 flex flex-col items-center justify-between min-h-[75vh]">
       
-      {/* JENDELA KAMERA UTAMA DI TENGAH */}
-      <div className="relative w-full aspect-square bg-black rounded-[36px] overflow-hidden shadow-2xl border border-white/10 flex items-center justify-center">
+      {/* JENDELA KAMERA UTAMA (PERSEGI 1x1, AMAN DARI BOTTOM NAV) */}
+      <div className="relative w-full aspect-square max-h-[54vh] bg-black rounded-[36px] overflow-hidden shadow-2xl border border-white/10 flex items-center justify-center my-1">
         {!capturedImage ? (
           <video
             ref={videoRef}
@@ -311,11 +304,8 @@ export default function CameraHome({ memories, onAddMemory, onNavigateTab, onSho
           <img src={capturedImage} alt="Captured" className="w-full h-full object-cover" />
         )}
 
-        {/* Efek layar putih transparan dihapus total */}
-
         {!capturedImage && (
           <div className="absolute top-4 left-4 right-4 flex items-center justify-between z-20">
-            {/* Tombol Toggle Status Flash (Nyala saat jepret saja) */}
             <button
               onClick={() => {
                 const nextState = !isFlashActive;
@@ -343,7 +333,7 @@ export default function CameraHome({ memories, onAddMemory, onNavigateTab, onSho
 
       {/* KONTROL BAWAH KAMERA */}
       {!capturedImage ? (
-        <div className="w-full flex items-center justify-around pt-6 px-4">
+        <div className="w-full flex items-center justify-around pt-2 pb-2 px-4">
           <input 
             type="file" 
             ref={fileInputRef} 
@@ -361,7 +351,7 @@ export default function CameraHome({ memories, onAddMemory, onNavigateTab, onSho
 
           <button
             onClick={handleCapture}
-            className="w-20 h-20 rounded-full border-4 border-sky-500 flex items-center justify-center p-1.5 shadow-2xl active:scale-95 transition cursor-pointer bg-black/20 shadow-sky-500/30"
+            className="w-18 h-18 rounded-full border-4 border-sky-500 flex items-center justify-center p-1 shadow-2xl active:scale-95 transition cursor-pointer bg-black/20 shadow-sky-500/30"
           >
             <div className="w-full h-full bg-white rounded-full hover:bg-slate-200 transition" />
           </button>
@@ -375,7 +365,7 @@ export default function CameraHome({ memories, onAddMemory, onNavigateTab, onSho
           </button>
         </div>
       ) : (
-        <div className="w-full space-y-3.5 pt-4 animate-in fade-in duration-200 bg-slate-900/90 backdrop-blur-xl p-4 rounded-3xl border border-sky-500/20 shadow-xl">
+        <div className="w-full space-y-2.5 pt-2 pb-1 animate-in fade-in duration-200 bg-slate-900/90 backdrop-blur-xl p-3.5 rounded-3xl border border-sky-500/20 shadow-xl">
           <div>
             <label className="text-[11px] font-bold text-slate-300 block mb-1">Cerita Momen</label>
             <input
@@ -383,7 +373,7 @@ export default function CameraHome({ memories, onAddMemory, onNavigateTab, onSho
               value={caption}
               onChange={(e) => setCaption(e.target.value)}
               placeholder="Tulis kenangan manis hari ini..."
-              className="w-full bg-slate-950 text-white text-xs px-3.5 py-2.5 rounded-xl border border-slate-700 focus:outline-none focus:border-sky-400 shadow-inner"
+              className="w-full bg-slate-950 text-white text-xs px-3.5 py-2 rounded-xl border border-slate-700 focus:outline-none focus:border-sky-400 shadow-inner"
             />
           </div>
 
@@ -397,7 +387,7 @@ export default function CameraHome({ memories, onAddMemory, onNavigateTab, onSho
               )}
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <div className="relative">
                 <MapPin className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
@@ -405,7 +395,7 @@ export default function CameraHome({ memories, onAddMemory, onNavigateTab, onSho
                   placeholder="Contoh: Pantai Padang"
                   value={locationName}
                   onChange={(e) => setLocationName(e.target.value)}
-                  className="w-full text-xs pl-9 pr-3.5 py-2.5 rounded-xl border border-slate-700 focus:outline-none focus:border-sky-400 bg-slate-950 text-white placeholder:text-slate-500 shadow-inner"
+                  className="w-full text-xs pl-9 pr-3.5 py-2 rounded-xl border border-slate-700 focus:outline-none focus:border-sky-400 bg-slate-950 text-white placeholder:text-slate-500 shadow-inner"
                 />
               </div>
 
@@ -414,7 +404,7 @@ export default function CameraHome({ memories, onAddMemory, onNavigateTab, onSho
                   type="button"
                   onClick={handleGetCurrentLocation}
                   disabled={isGettingGPS}
-                  className={`py-2 px-2.5 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1.5 transition shadow-sm border cursor-pointer ${
+                  className={`py-1.5 px-2 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1.5 transition shadow-sm border cursor-pointer ${
                     coords && !showMapPicker
                       ? "bg-emerald-950 border-emerald-500/40 text-emerald-300"
                       : "bg-sky-950/80 hover:bg-sky-900 border-sky-500/40 text-sky-300"
@@ -427,7 +417,7 @@ export default function CameraHome({ memories, onAddMemory, onNavigateTab, onSho
                 <button
                   type="button"
                   onClick={() => setShowMapPicker(!showMapPicker)}
-                  className={`py-2 px-2.5 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1.5 transition shadow-sm cursor-pointer border ${
+                  className={`py-1.5 px-2 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1.5 transition shadow-sm cursor-pointer border ${
                     showMapPicker
                       ? "bg-sky-500 text-white border-sky-400 shadow-sky-500/30"
                       : "bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-200"
@@ -446,21 +436,21 @@ export default function CameraHome({ memories, onAddMemory, onNavigateTab, onSho
             )}
           </div>
 
-          <div className="grid grid-cols-2 gap-2 pt-1">
+          <div className="grid grid-cols-2 gap-2 pt-0.5">
             <button
               onClick={() => {
                 setCapturedImage(null);
                 setCoords(null);
                 setShowMapPicker(false);
               }}
-              className="py-2.5 rounded-xl bg-slate-800 text-slate-300 text-xs font-bold hover:bg-slate-700 transition cursor-pointer"
+              className="py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-bold hover:bg-slate-700 transition cursor-pointer"
             >
               Ulangi / Ganti Foto
             </button>
             <button
               onClick={handleSaveCapturedMemory}
               disabled={isSaving}
-              className="py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 text-white text-xs font-bold shadow-lg shadow-sky-500/30 hover:opacity-90 transition cursor-pointer flex items-center justify-center gap-1.5 border border-sky-400/40"
+              className="py-2 rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 text-white text-xs font-bold shadow-lg shadow-sky-500/30 hover:opacity-90 transition cursor-pointer flex items-center justify-center gap-1.5 border border-sky-400/40"
             >
               <Sparkles className="w-4 h-4" />
               <span>Simpan Momen</span>
@@ -469,13 +459,13 @@ export default function CameraHome({ memories, onAddMemory, onNavigateTab, onSho
         </div>
       )}
 
-      {/* TOMBOL RIWAYAT DENGAN FOTO TERAKHIR */}
-      <div className="pt-4 pb-2">
+      {/* TOMBOL RIWAYAT DIBAWAH */}
+      <div className="pt-2 pb-1">
         <button
           onClick={() => onNavigateTab("calendar")}
-          className="flex items-center gap-2 bg-[#1c1c1e]/90 hover:bg-[#2c2c2e] px-5 py-2.5 rounded-full border border-white/10 shadow-xl transition cursor-pointer group"
+          className="flex items-center gap-2 bg-[#1c1c1e]/90 hover:bg-[#2c2c2e] px-4 py-2 rounded-full border border-white/10 shadow-xl transition cursor-pointer group"
         >
-          <div className="w-6 h-6 rounded-lg overflow-hidden border border-sky-400/50 bg-slate-800">
+          <div className="w-5 h-5 rounded-md overflow-hidden border border-sky-400/50 bg-slate-800">
             <img 
               src={memories.length > 0 ? memories[0].imageUrl : "https://images.unsplash.com/photo-1518199266791-5375a83190b7?w=100"} 
               alt="Riwayat" 
@@ -483,7 +473,7 @@ export default function CameraHome({ memories, onAddMemory, onNavigateTab, onSho
             />
           </div>
           <span className="text-xs font-bold text-white tracking-wide">Riwayat</span>
-          <ChevronDown className="w-4 h-4 text-slate-400 group-hover:translate-y-0.5 transition-transform" />
+          <ChevronDown className="w-3.5 h-3.5 text-slate-400 group-hover:translate-y-0.5 transition-transform" />
         </button>
       </div>
 
