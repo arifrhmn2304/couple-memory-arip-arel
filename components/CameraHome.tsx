@@ -149,21 +149,31 @@ export default function CameraHome({ memories, onAddMemory, onNavigateTab, onSho
   const handleCapture = async () => {
     if (!videoRef.current) return;
 
+    // 1. Jika flash aktif, nyalakan flash fisik terlebih dahulu
     if (isFlashActive && facingMode === "environment") {
-      await triggerFlashBurst();
+      try {
+        const stream = videoRef.current.srcObject as MediaStream;
+        const track = stream.getVideoTracks()[0];
+        const capabilities = track.getCapabilities() as any;
+        if (capabilities && capabilities.torch) {
+          await track.applyConstraints({
+            advanced: [{ torch: true } as any]
+          });
+        }
+      } catch (err) {
+        console.error("Gagal menyalakan flash:", err);
+      }
+      
+      // Beri jeda 300ms agar cahaya flash sempat menerangi objek dan kamera mengunci fokus
+      onShowToast("⚡ Menyalakan flash & mengunci fokus...");
+      await new Promise((resolve) => setTimeout(resolve, 300));
     }
 
-    // Berikan jeda 400ms agar kamera sempat mengunci fokus secara otomatis
-    onShowToast("🔍 Mengunci fokus kamera...");
-    await new Promise((resolve) => setTimeout(resolve, 400));
-
+    // 2. Ambil gambar saat flash SEDANG NYALA TERANG
     const video = videoRef.current;
     const canvas = document.createElement("canvas");
-    
-    // Gunakan resolusi tinggi asli kamera agar tajam dan tidak blur
     canvas.width = video.videoWidth || 1920;
     canvas.height = video.videoHeight || 1080;
-    
     const ctx = canvas.getContext("2d");
     
     if (ctx) {
@@ -172,10 +182,21 @@ export default function CameraHome({ memories, onAddMemory, onNavigateTab, onSho
         ctx.scale(-1, 1);
       }
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      
-      // Ambil kualitas gambar maksimal (1.0)
       const imageUrl = canvas.toDataURL("image/jpeg", 1.0);
       setCapturedImage(imageUrl);
+    }
+
+    // 3. Setelah foto berhasil diambil, matikan kembali flash fisiknya
+    if (isFlashActive && facingMode === "environment") {
+      try {
+        const stream = videoRef.current.srcObject as MediaStream;
+        const track = stream.getVideoTracks()[0];
+        await track.applyConstraints({
+          advanced: [{ torch: false } as any]
+        });
+      } catch (err) {
+        console.error("Gagal mematikan flash:", err);
+      }
     }
   };
 
