@@ -3,7 +3,7 @@
 
 import { useState, useRef } from "react";
 import dynamic from "next/dynamic";
-import { Image as ImageIcon, Sparkles, MapPin, Navigation, Lock, Map, Camera } from "lucide-react";
+import { Image as ImageIcon, Sparkles, MapPin, Navigation, Lock, Map, Camera, FlipHorizontal } from "lucide-react";
 import { MemoryItem } from "./AddMemoryModal";
 // @ts-ignore
 import heic2any from "heic2any";
@@ -71,6 +71,28 @@ export default function CameraHome({ memories, onAddMemory, onNavigateTab, onSho
       onShowToast("✅ Foto berhasil disiapkan!");
     };
     reader.readAsDataURL(fileToProcess);
+  };
+
+  // Fungsi untuk membalik posisi gambar secara horizontal (Mirror Flip)
+  const handleFlipImage = () => {
+    if (!capturedImage) return;
+
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext("2d");
+
+      if (ctx) {
+        ctx.translate(canvas.width, 0);
+        ctx.scale(-1, 1);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        setCapturedImage(canvas.toDataURL("image/jpeg", 1.0));
+        onShowToast("🔄 Posisi foto dibalik!");
+      }
+    };
+    img.src = capturedImage;
   };
 
   const handleGetCurrentLocation = () => {
@@ -161,7 +183,7 @@ export default function CameraHome({ memories, onAddMemory, onNavigateTab, onSho
         className="hidden" 
       />
 
-      {/* JENDELA PREVIEW UTAMA (LEBIH PROPOSIONAL & PENUH) */}
+      {/* JENDELA PREVIEW UTAMA */}
       <div 
         onClick={() => !capturedImage && captureInputRef.current?.click()}
         className={`relative w-full aspect-square max-h-[60vh] bg-black rounded-[36px] overflow-hidden shadow-2xl border border-white/10 flex items-center justify-center my-auto ${!capturedImage ? 'cursor-pointer active:scale-[0.98] transition-transform' : ''}`}
@@ -286,24 +308,35 @@ export default function CameraHome({ memories, onAddMemory, onNavigateTab, onSho
             )}
           </div>
 
-          <div className="grid grid-cols-2 gap-2 pt-0.5">
+          <div className="grid grid-cols-3 gap-2 pt-0.5">
             <button
               onClick={() => {
                 setCapturedImage(null);
                 setCoords(null);
                 setShowMapPicker(false);
               }}
-              className="py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-bold hover:bg-slate-700 transition cursor-pointer"
+              className="py-2 rounded-xl bg-slate-800 text-slate-300 text-[11px] font-bold hover:bg-slate-700 transition cursor-pointer"
             >
-              Ulangi / Ganti Foto
+              Ulangi
             </button>
+
+            {/* Tombol Putar/Balik Gambar (Mirror Flip) */}
+            <button
+              onClick={handleFlipImage}
+              className="py-2 rounded-xl bg-sky-950/80 text-sky-300 border border-sky-500/30 text-[11px] font-bold hover:bg-sky-900 transition cursor-pointer flex items-center justify-center gap-1"
+              title="Balik Posisi Foto"
+            >
+              <FlipHorizontal className="w-3.5 h-3.5" />
+              <span>Putar</span>
+            </button>
+
             <button
               onClick={handleSaveCapturedMemory}
               disabled={isSaving}
-              className="py-2 rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 text-white text-xs font-bold shadow-lg shadow-sky-500/30 hover:opacity-90 transition cursor-pointer flex items-center justify-center gap-1.5 border border-sky-400/40"
+              className="py-2 rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 text-white text-[11px] font-bold shadow-lg shadow-sky-500/30 hover:opacity-90 transition cursor-pointer flex items-center justify-center gap-1 border border-sky-400/40"
             >
-              <Sparkles className="w-4 h-4" />
-              <span>Simpan Momen</span>
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Simpan</span>
             </button>
           </div>
         </div>
