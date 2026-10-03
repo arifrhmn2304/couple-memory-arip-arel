@@ -151,13 +151,19 @@ export default function CameraHome({ memories, onAddMemory, onNavigateTab, onSho
 
     if (isFlashActive && facingMode === "environment") {
       await triggerFlashBurst();
-      await new Promise((resolve) => setTimeout(resolve, 100));
     }
+
+    // Berikan jeda 400ms agar kamera sempat mengunci fokus secara otomatis
+    onShowToast("🔍 Mengunci fokus kamera...");
+    await new Promise((resolve) => setTimeout(resolve, 400));
 
     const video = videoRef.current;
     const canvas = document.createElement("canvas");
-    canvas.width = video.videoWidth || 720;
-    canvas.height = video.videoHeight || 720;
+    
+    // Gunakan resolusi tinggi asli kamera agar tajam dan tidak blur
+    canvas.width = video.videoWidth || 1920;
+    canvas.height = video.videoHeight || 1080;
+    
     const ctx = canvas.getContext("2d");
     
     if (ctx) {
@@ -166,7 +172,9 @@ export default function CameraHome({ memories, onAddMemory, onNavigateTab, onSho
         ctx.scale(-1, 1);
       }
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      const imageUrl = canvas.toDataURL("image/jpeg");
+      
+      // Ambil kualitas gambar maksimal (1.0)
+      const imageUrl = canvas.toDataURL("image/jpeg", 1.0);
       setCapturedImage(imageUrl);
     }
   };
