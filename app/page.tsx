@@ -18,17 +18,48 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState("home");
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  const [memories, setMemories] = useState<MemoryItem[]>([]);
-  const [bucketItems, setBucketItems] = useState<BucketItem[]>([]);
+  // 1. INISIALISASI 0 MS: Langsung baca dari localStorage HP jika ada
+  const [memories, setMemories] = useState<MemoryItem[]>(() => {
+    if (typeof window !== "undefined") {
+      const cached = localStorage.getItem("our_memories_cache");
+      if (cached) {
+        try { return JSON.parse(cached); } catch (e) { console.error(e); }
+      }
+    }
+    return [];
+  });
+
+  const [bucketItems, setBucketItems] = useState<BucketItem[]>(() => {
+    if (typeof window !== "undefined") {
+      const cached = localStorage.getItem("our_bucket_cache");
+      if (cached) {
+        try { return JSON.parse(cached); } catch (e) { console.error(e); }
+      }
+    }
+    return [];
+  });
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3000);
   };
 
-  // 1. Ambil data dari Supabase saat pertama kali dibuka
+  // 2. Simpan otomatis ke localStorage setiap kali datanya berubah
   useEffect(() => {
-    async function fetchData() {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("our_memories_cache", JSON.stringify(memories));
+    }
+  }, [memories]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("our_bucket_cache", JSON.stringify(bucketItems));
+    }
+  }, [bucketItems]);
+
+  // 3. Sinkronisasi background dari Supabase setelah halaman terbuka secara instan
+  useEffect(() => {
+    async function syncDataFromSupabase() {
       try {
         const { data: memData } = await supabase
           .from("memories")
@@ -59,14 +90,14 @@ export default function Home() {
           setBucketItems(bucketData);
         }
       } catch (err) {
-        console.error("Error fetching data:", err);
+        console.error("Background sync error (menggunakan cache lokal):", err);
       }
     }
 
-    fetchData();
+    syncDataFromSupabase();
   }, []);
 
-  // 2. Tambah Memory & Simpan ke Supabase
+  // 4. Tambah Memory & Simpan ke Supabase
   const handleAddMemory = async (newMemory: MemoryItem) => {
     setMemories((prev) => [newMemory, ...prev]);
     showToast("✨ Memory indah kalian berhasil disimpan!");
@@ -86,7 +117,7 @@ export default function Home() {
     ]);
   };
 
-  // 3. Hapus Memory dari Supabase
+  // 5. Hapus Memory dari Supabase
   const handleDeleteMemory = async (id: string) => {
     setMemories((prev) => prev.filter((item) => item.id !== id));
     showToast("🗑️ Kenangan berhasil dihapus!");
@@ -94,7 +125,7 @@ export default function Home() {
     await supabase.from("memories").delete().eq("id", id);
   };
 
-  // 4. Tambah Bucket List & Simpan ke Supabase
+  // 6. Tambah Bucket List & Simpan ke Supabase
   const handleAddItem = async (newItem: BucketItem) => {
     setBucketItems((prev) => [newItem, ...prev]);
     showToast("🎯 Impian baru berhasil ditambahkan!");
@@ -109,7 +140,7 @@ export default function Home() {
     ]);
   };
 
-  // 5. Update Status Checklist ke Supabase
+  // 7. Update Status Checklist ke Supabase
   const handleToggleItem = async (id: string) => {
     const targetItem = bucketItems.find((item) => item.id === id);
     if (!targetItem) return;
@@ -128,7 +159,7 @@ export default function Home() {
       .eq("id", id);
   };
 
-  // 6. Hapus Bucket List dari Supabase
+  // 8. Hapus Bucket List dari Supabase
   const handleDeleteItem = async (id: string) => {
     setBucketItems((prev) => prev.filter((item) => item.id !== id));
     showToast("🗑️ Impian berhasil dihapus!");
