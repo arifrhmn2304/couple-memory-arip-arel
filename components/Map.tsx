@@ -22,6 +22,22 @@ function MapRefresher() {
   return null;
 }
 
+// Fungsi menghitung jarak (meter) antar dua titik koordinat bumi (Haversine Formula)
+function hitungJarakMeter(lat1: number, lon1: number, lat2: number, lon2: number) {
+  const R = 6371e3; // Radius bumi dalam meter
+  const p1 = (lat1 * Math.PI) / 180;
+  const p2 = (lat2 * Math.PI) / 180;
+  const deltaP = ((lat2 - lat1) * Math.PI) / 180;
+  const deltaLon = ((lon2 - lon1) * Math.PI) / 180;
+
+  const a =
+    Math.sin(deltaP / 2) * Math.sin(deltaP / 2) +
+    Math.cos(p1) * Math.cos(p2) * Math.sin(deltaLon / 2) * Math.sin(deltaLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+  return R * c; // Kembalikan nilai dalam meter
+}
+
 interface MapProps {
   memories: MemoryItem[];
 }
@@ -47,25 +63,34 @@ export default function Map({ memories }: MapProps) {
     ? [memories[0].lat, memories[0].lng] as [number, number] 
     : padangCenter;
 
-  const groupedMemories = memories.reduce((acc, item) => {
+  // LOGIKA BARU: CLUSTERING RADIUS 20 METER
+  const radiusThreshold = 30; // Batas radius dalam meter
+  const groupedMemories: { lat: number; lng: number; items: MemoryItem[] }[] = [];
+
+  memories.forEach((item) => {
     const lat = item.lat || padangCenter[0];
     const lng = item.lng || padangCenter[1];
-    const key = `${lat}-${lng}`;
-    
-    if (!acc[key]) {
-      acc[key] = {
+
+    // Coba cari apakah ada pin grup yang jaraknya kurang dari 20 meter
+    const existingGroup = groupedMemories.find(
+      (group) => hitungJarakMeter(group.lat, group.lng, lat, lng) <= radiusThreshold
+    );
+
+    if (existingGroup) {
+      // Kalau masuk radius, gabungkan ke pin yang sudah ada
+      existingGroup.items.push(item);
+    } else {
+      // Kalau di luar radius, bikin grup pin baru
+      groupedMemories.push({
         lat,
         lng,
-        items: []
-      };
+        items: [item],
+      });
     }
-    acc[key].items.push(item);
-    return acc;
-  }, {} as Record<string, { lat: number; lng: number; items: MemoryItem[] }>);
+  });
 
   return (
     <div className="w-full h-full min-h-[400px] relative">
-      {/* KUNCI UTAMA: Berikan key dinamis agar MapContainer di-destroy & dibuat ulang dengan bersih saat memori berubah */}
       <MapContainer
         key={`${centerCoord[0]}-${centerCoord[1]}-${memories.length}`}
         center={centerCoord}
@@ -80,7 +105,7 @@ export default function Map({ memories }: MapProps) {
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
 
-        {Object.values(groupedMemories).map((group, index) => {
+        {groupedMemories.map((group, index) => {
           const primaryImage = group.items[0].imageUrl;
           const count = group.items.length;
 
@@ -126,6 +151,7 @@ export default function Map({ memories }: MapProps) {
                   <div className="flex items-center justify-between pb-2 border-b border-white/10">
                     <div className="flex items-center gap-1 text-[11px] font-bold text-sky-400">
                       <MapPin className="w-3 h-3 shrink-0" />
+                      {/* Tampilkan nama lokasi dari foto pertama di grup ini */}
                       <span className="truncate max-w-[140px]">{group.items[0].location}</span>
                     </div>
                     <span className="bg-sky-950/80 px-2 py-0.5 rounded-full text-[9px] border border-sky-500/30 text-sky-300 font-bold">
