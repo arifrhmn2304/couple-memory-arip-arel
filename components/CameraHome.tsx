@@ -3,7 +3,7 @@
 
 import { useState, useRef } from "react";
 import dynamic from "next/dynamic";
-import { RefreshCw, Image as ImageIcon, ChevronDown, Sparkles, MapPin, Navigation, Lock, Map, Camera } from "lucide-react";
+import { Image as ImageIcon, Sparkles, MapPin, Navigation, Lock, Map, Camera } from "lucide-react";
 import { MemoryItem } from "./AddMemoryModal";
 // @ts-ignore
 import heic2any from "heic2any";
@@ -28,7 +28,6 @@ export default function CameraHome({ memories, onAddMemory, onNavigateTab, onSho
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const captureInputRef = useRef<HTMLInputElement | null>(null);
   
-  const [facingMode, setFacingMode] = useState<"environment" | "user">("environment");
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   
   const [caption, setCaption] = useState<string>("");
@@ -38,13 +37,13 @@ export default function CameraHome({ memories, onAddMemory, onNavigateTab, onSho
   const [isGettingGPS, setIsGettingGPS] = useState<boolean>(false);
   const [isSaving, setIsSaving] = useState<boolean>(false);
 
-  // Proses gambar baik dari Kamera Native maupun Galeri (Termasuk konversi iPhone HEIC)
   const processImageFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     let fileToProcess = file;
 
+    // Konversi file HEIC dari iPhone
     if (file.type === "image/heic" || file.name.toLowerCase().endsWith(".heic")) {
       onShowToast("🔄 Mengonversi foto resolusi tinggi...");
       try {
@@ -52,7 +51,7 @@ export default function CameraHome({ memories, onAddMemory, onNavigateTab, onSho
         const convertedBlob = await heic2any({
           blob: file,
           toType: "image/jpeg",
-          quality: 1.0, // Kualitas maksimal
+          quality: 1.0,
         });
         
         const conversionResult = Array.isArray(convertedBlob) ? convertedBlob[0] : convertedBlob;
@@ -69,14 +68,9 @@ export default function CameraHome({ memories, onAddMemory, onNavigateTab, onSho
     const reader = new FileReader();
     reader.onloadend = () => {
       setCapturedImage(reader.result as string);
-      onShowToast("✅ Foto berhasil diambil!");
+      onShowToast("✅ Foto berhasil disiapkan!");
     };
     reader.readAsDataURL(fileToProcess);
-  };
-
-  const handleSwitchCamera = () => {
-    setFacingMode((prev) => (prev === "environment" ? "user" : "environment"));
-    onShowToast(facingMode === "environment" ? "🔄 Beralih ke Kamera Depan" : "🔄 Beralih ke Kamera Belakang");
   };
 
   const handleGetCurrentLocation = () => {
@@ -97,7 +91,7 @@ export default function CameraHome({ memories, onAddMemory, onNavigateTab, onSho
       },
       () => {
         setIsGettingGPS(false);
-        onShowToast("⚠️️ Gagal mengambil lokasi GPS. Pastikan izin GPS di HP sudah aktif.");
+        onShowToast("⚠ Gagal mengambil lokasi GPS. Pastikan izin GPS di HP sudah aktif.");
       },
       { enableHighAccuracy: true, timeout: 10000 }
     );
@@ -147,14 +141,13 @@ export default function CameraHome({ memories, onAddMemory, onNavigateTab, onSho
   };
 
   return (
-    <div className="w-full max-w-sm mx-auto px-4 pb-24 flex flex-col items-center justify-between min-h-[75vh]">
+    <div className="w-full max-w-sm mx-auto px-4 pb-20 flex flex-col items-center justify-between min-h-[80vh]">
       
       {/* INPUT TERSEMBUNYI UNTUK NATIVE CAMERA & GALERI */}
-      {/* Tombol ini akan otomatis membuka kamera bawaan sistem HP tanpa nanya izin browser */}
       <input 
         type="file" 
         accept="image/*" 
-        capture={facingMode} 
+        capture="environment" 
         ref={captureInputRef} 
         onChange={processImageFile} 
         className="hidden" 
@@ -168,10 +161,10 @@ export default function CameraHome({ memories, onAddMemory, onNavigateTab, onSho
         className="hidden" 
       />
 
-      {/* JENDELA PREVIEW UTAMA (PERSEGI 1x1) */}
+      {/* JENDELA PREVIEW UTAMA (LEBIH PROPOSIONAL & PENUH) */}
       <div 
         onClick={() => !capturedImage && captureInputRef.current?.click()}
-        className={`relative w-full aspect-square max-h-[54vh] bg-black rounded-[36px] overflow-hidden shadow-2xl border border-white/10 flex items-center justify-center my-1 ${!capturedImage ? 'cursor-pointer active:scale-[0.98] transition-transform' : ''}`}
+        className={`relative w-full aspect-square max-h-[60vh] bg-black rounded-[36px] overflow-hidden shadow-2xl border border-white/10 flex items-center justify-center my-auto ${!capturedImage ? 'cursor-pointer active:scale-[0.98] transition-transform' : ''}`}
       >
         {!capturedImage ? (
           <div className="flex flex-col items-center justify-center space-y-4 opacity-60">
@@ -185,9 +178,10 @@ export default function CameraHome({ memories, onAddMemory, onNavigateTab, onSho
         )}
       </div>
 
-      {/* KONTROL BAWAH KAMERA */}
+      {/* KONTROL BAWAH KAMERA (SIMETRIS: GALERI - JEPRET - RIWAYAT) */}
       {!capturedImage ? (
-        <div className="w-full flex items-center justify-around pt-2 pb-2 px-4">
+        <div className="w-full flex items-center justify-around pt-3 pb-2 px-2">
+          {/* Tombol Galeri di Kiri */}
           <button
             onClick={() => fileInputRef.current?.click()}
             className="w-12 h-12 rounded-2xl bg-slate-800/80 hover:bg-slate-700 flex items-center justify-center border border-white/10 shadow-lg text-white transition cursor-pointer"
@@ -196,21 +190,28 @@ export default function CameraHome({ memories, onAddMemory, onNavigateTab, onSho
             <ImageIcon className="w-5 h-5 text-sky-400" />
           </button>
 
+          {/* Tombol Jepret Utama di Tengah */}
           <button
             onClick={() => captureInputRef.current?.click()}
-            className="w-18 h-18 rounded-full border-4 border-sky-500 flex items-center justify-center p-1 shadow-2xl active:scale-95 transition cursor-pointer bg-black/20 shadow-sky-500/30"
+            className="w-20 h-20 rounded-full border-4 border-sky-500 flex items-center justify-center p-1 shadow-2xl active:scale-95 transition cursor-pointer bg-black/20 shadow-sky-500/30"
           >
             <div className="w-full h-full bg-white rounded-full hover:bg-slate-200 transition flex items-center justify-center">
-              <Camera className="w-6 h-6 text-slate-800" />
+              <Camera className="w-7 h-7 text-slate-800" />
             </div>
           </button>
 
+          {/* Tombol Riwayat dengan Thumbnail di Kanan */}
           <button
-            onClick={handleSwitchCamera}
-            className="w-12 h-12 rounded-2xl bg-slate-800/80 hover:bg-slate-700 flex items-center justify-center border border-white/10 shadow-lg text-white transition cursor-pointer"
-            title={`Mode Kamera: ${facingMode === "environment" ? "Belakang" : "Depan"}`}
+            onClick={() => onNavigateTab("calendar")}
+            className="w-12 h-12 rounded-2xl overflow-hidden border-2 border-sky-400/50 bg-slate-800 shadow-lg transition active:scale-95 cursor-pointer relative group"
+            title="Lihat Riwayat"
           >
-            <RefreshCw className="w-5 h-5 text-sky-400" />
+            <img 
+              src={memories.length > 0 ? memories[0].imageUrl : "https://images.unsplash.com/photo-1518199266791-5375a83190b7?w=100"} 
+              alt="Riwayat" 
+              className="w-full h-full object-cover group-hover:scale-110 transition-transform" 
+            />
+            <div className="absolute inset-0 bg-black/20" />
           </button>
         </div>
       ) : (
@@ -307,24 +308,6 @@ export default function CameraHome({ memories, onAddMemory, onNavigateTab, onSho
           </div>
         </div>
       )}
-
-      {/* TOMBOL RIWAYAT DIBAWAH */}
-      <div className="pt-2 pb-1">
-        <button
-          onClick={() => onNavigateTab("calendar")}
-          className="flex items-center gap-2 bg-[#1c1c1e]/90 hover:bg-[#2c2c2e] px-4 py-2 rounded-full border border-white/10 shadow-xl transition cursor-pointer group"
-        >
-          <div className="w-5 h-5 rounded-md overflow-hidden border border-sky-400/50 bg-slate-800">
-            <img 
-              src={memories.length > 0 ? memories[0].imageUrl : "https://images.unsplash.com/photo-1518199266791-5375a83190b7?w=100"} 
-              alt="Riwayat" 
-              className="w-full h-full object-cover" 
-            />
-          </div>
-          <span className="text-xs font-bold text-white tracking-wide">Riwayat</span>
-          <ChevronDown className="w-3.5 h-3.5 text-slate-400 group-hover:translate-y-0.5 transition-transform" />
-        </button>
-      </div>
 
     </div>
   );
