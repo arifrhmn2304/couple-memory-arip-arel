@@ -53,7 +53,7 @@ export default function DashboardHeader() {
                 {daysTogether}
               </span>
               <span className="text-[11px] font-medium text-sky-300/90">
-                Days Togheter ✨
+                Days Together ✨
               </span>
             </div>
           </div>
