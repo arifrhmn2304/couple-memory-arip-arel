@@ -30,8 +30,8 @@ export default function CameraHome({ memories, onAddMemory, onNavigateTab, onSho
   
   const [facingMode, setFacingMode] = useState<"user" | "environment">("user");
   const [zoomLevel, setZoomLevel] = useState<number>(1);
-  const [maxZoom, setMaxZoom] = useState<number>(3); // Batas maksimal zoom dari hardware HP
-  const [isFlashOn, setIsFlashOn] = useState<boolean>(false);
+  const [maxZoom, setMaxZoom] = useState<number>(3); 
+  const [isFlashActive, setIsFlashActive] = useState<boolean>(false); // Status mode flash aktif/mati
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   
   const [caption, setCaption] = useState<string>("");
@@ -41,21 +41,32 @@ export default function CameraHome({ memories, onAddMemory, onNavigateTab, onSho
   const [isGettingGPS, setIsGettingGPS] = useState<boolean>(false);
   const [isSaving, setIsSaving] = useState<boolean>(false);
 
-  // Fungsi untuk mengontrol Flash / Torch fisik HP
-  const togglePhysicalFlash = async (turnOn: boolean) => {
+  // Fungsi untuk menyalakan/mematikan flash fisik sesaat
+  const triggerFlashBurst = async () => {
     try {
       if (videoRef.current && videoRef.current.srcObject) {
         const stream = videoRef.current.srcObject as MediaStream;
         const track = stream.getVideoTracks()[0];
         const capabilities = track.getCapabilities() as any;
+        
         if (capabilities && capabilities.torch) {
+          // Nyalakan flash
           await track.applyConstraints({
-            advanced: [{ torch: turnOn } as any]
+            advanced: [{ torch: true } as any]
           });
+          
+          // Matikan kembali setelah 300ms (0.3 detik) agar seperti efek jepretan kamera asli
+          setTimeout(async () => {
+            try {
+              await track.applyConstraints({
+                advanced: [{ torch: false } as any]
+              });
+            } catch (e) {}
+          }, 300);
         }
       }
     } catch (err) {
-      console.error("Gagal menyalakan flash fisik:", err);
+      console.error("Gagal menjalankan flash burst:", err);
     }
   };
 
@@ -68,15 +79,12 @@ export default function CameraHome({ memories, onAddMemory, onNavigateTab, onSho
         const capabilities = track.getCapabilities() as any;
 
         if (capabilities && capabilities.zoom) {
-          // Jika HP mendukung hardware zoom bawaan
           await track.applyConstraints({
             advanced: [{ zoom: newZoom } as any]
           });
           setZoomLevel(newZoom);
         } else {
-          // Fallback jika hardware tidak mendukung zoom web API
           setZoomLevel(newZoom);
-          onShowToast("⚠️ Hardware HP tidak mendukung zoom langsung, menggunakan penyesuaian layar.");
         }
       }
     } catch (err) {
@@ -95,7 +103,6 @@ export default function CameraHome({ memories, onAddMemory, onNavigateTab, onSho
           oldStream.getTracks().forEach((track) => track.stop());
         }
 
-        // Meminta izin video dengan opsi PTZ/Zoom jika didukung browser
         activeStream = await navigator.mediaDevices.getUserMedia({
           video: { 
             facingMode: facingMode,
@@ -108,14 +115,12 @@ export default function CameraHome({ memories, onAddMemory, onNavigateTab, onSho
           videoRef.current.srcObject = activeStream;
         }
 
-        // Cek batasan zoom maksimal dari kamera HP tersebut
         const track = activeStream.getVideoTracks()[0];
         const capabilities = track.getCapabilities() as any;
         if (capabilities && capabilities.zoom) {
           setMaxZoom(capabilities.zoom.max || 5);
         }
       } catch (err) {
-        console.error("Gagal mengakses kamera dengan zoom, mencoba mode standar:", err);
         try {
           activeStream = await navigator.mediaDevices.getUserMedia({
             video: { facingMode: facingMode },
@@ -146,8 +151,16 @@ export default function CameraHome({ memories, onAddMemory, onNavigateTab, onSho
     };
   }, [facingMode, capturedImage]);
 
-  const handleCapture = () => {
+  const handleCapture = async () => {
     if (!videoRef.current) return;
+
+    // Jika mode flash aktif, nyalakan flash fisik sesaat sebelum gambar diambil
+    if (isFlashActive && facingMode === "environment") {
+      await triggerFlashBurst();
+      // Beri sedikit jeda agar lampu sempat menyala terang saat canvas mengambil gambar
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+
     const video = videoRef.current;
     const canvas = document.createElement("canvas");
     canvas.width = video.videoWidth || 720;
@@ -162,11 +175,6 @@ export default function CameraHome({ memories, onAddMemory, onNavigateTab, onSho
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
       const imageUrl = canvas.toDataURL("image/jpeg");
       setCapturedImage(imageUrl);
-      
-      if (isFlashOn) {
-        togglePhysicalFlash(false);
-        setIsFlashOn(false);
-      }
     }
   };
 
@@ -205,16 +213,11 @@ export default function CameraHome({ memories, onAddMemory, onNavigateTab, onSho
   };
 
   const handleSwitchCamera = () => {
-    if (isFlashOn) {
-      togglePhysicalFlash(false);
-      setIsFlashOn(false);
-    }
     setFacingMode((prev) => (prev === "user" ? "environment" : "user"));
     setZoomLevel(1);
     onShowToast(facingMode === "user" ? "🔄 Beralih ke Kamera Belakang" : "🔄 Beralih ke Kamera Depan");
   };
 
-  // Logika Tombol Zoom Bergantian (1x -> 2x -> maxZoom -> kembali ke 1x)
   const handleToggleZoom = async () => {
     let nextZoom = zoomLevel + 1;
     if (nextZoom > Math.min(maxZoom, 4)) {
@@ -308,18 +311,19 @@ export default function CameraHome({ memories, onAddMemory, onNavigateTab, onSho
           <img src={capturedImage} alt="Captured" className="w-full h-full object-cover" />
         )}
 
-        {isFlashOn && <div className="absolute inset-0 bg-white/40 pointer-events-none animate-pulse" />}
+        {/* Efek layar putih transparan dihapus total */}
 
         {!capturedImage && (
           <div className="absolute top-4 left-4 right-4 flex items-center justify-between z-20">
+            {/* Tombol Toggle Status Flash (Nyala saat jepret saja) */}
             <button
-              onClick={async () => {
-                const nextState = !isFlashOn;
-                setIsFlashOn(nextState);
-                await togglePhysicalFlash(nextState);
+              onClick={() => {
+                const nextState = !isFlashActive;
+                setIsFlashActive(nextState);
+                onShowToast(nextState ? "⚡ Flash Auto/Jepret Aktif" : "⚡ Flash Dimatikan");
               }}
               className={`p-3 rounded-full backdrop-blur-md transition shadow-lg border cursor-pointer ${
-                isFlashOn 
+                isFlashActive 
                   ? "bg-sky-500 text-white border-sky-400 shadow-sky-500/50" 
                   : "bg-black/40 text-white border-white/10"
               }`}
