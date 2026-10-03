@@ -3,7 +3,7 @@
 
 import { useState, useRef } from "react";
 import dynamic from "next/dynamic";
-import { Image as ImageIcon, Sparkles, MapPin, Navigation, Lock, Map, Camera, FlipHorizontal } from "lucide-react";
+import { Image as ImageIcon, Sparkles, MapPin, Navigation, Lock, Map, Camera } from "lucide-react";
 import { MemoryItem } from "./AddMemoryModal";
 // @ts-ignore
 import heic2any from "heic2any";
@@ -35,7 +35,16 @@ export default function CameraHome({ memories, onAddMemory, onNavigateTab, onSho
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [showMapPicker, setShowMapPicker] = useState<boolean>(false);
   const [isGettingGPS, setIsGettingGPS] = useState<boolean>(false);
+  const [isSearching, setIsSearching] = useState<boolean>(false);
   const [isSaving, setIsSaving] = useState<boolean>(false);
+
+  // KUNCI GEMBOK 4 PILAR
+  const isFormValid = Boolean(
+    capturedImage && 
+    caption.trim() !== "" && 
+    locationName.trim() !== "" && 
+    coords !== null
+  );
 
   const processImageFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -73,28 +82,6 @@ export default function CameraHome({ memories, onAddMemory, onNavigateTab, onSho
     reader.readAsDataURL(fileToProcess);
   };
 
-  // Fungsi untuk membalik posisi gambar secara horizontal (Mirror Flip)
-  const handleFlipImage = () => {
-    if (!capturedImage) return;
-
-    const img = new Image();
-    img.onload = () => {
-      const canvas = document.createElement("canvas");
-      canvas.width = img.width;
-      canvas.height = img.height;
-      const ctx = canvas.getContext("2d");
-
-      if (ctx) {
-        ctx.translate(canvas.width, 0);
-        ctx.scale(-1, 1);
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        setCapturedImage(canvas.toDataURL("image/jpeg", 1.0));
-        onShowToast("🔄 Posisi foto dibalik!");
-      }
-    };
-    img.src = capturedImage;
-  };
-
   const handleGetCurrentLocation = () => {
     if (!navigator.geolocation) {
       onShowToast("⚠️ Browser/HP kamu tidak mendukung fitur GPS.");
@@ -119,6 +106,33 @@ export default function CameraHome({ memories, onAddMemory, onNavigateTab, onSho
     );
   };
 
+  const handleSearchLocation = async () => {
+    if (!locationName.trim()) return;
+    setIsSearching(true);
+    
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(locationName)}`
+      );
+      const data = await response.json();
+      
+      if (data && data.length > 0) {
+        const lat = parseFloat(data[0].lat);
+        const lng = parseFloat(data[0].lon);
+        
+        setCoords({ lat, lng });
+        setShowMapPicker(true);
+        onShowToast(`📍 Ketemu! ${data[0].display_name.substring(0, 30)}...`);
+      } else {
+        onShowToast("❌ Lokasi tidak ditemukan. Coba nama yang lebih spesifik.");
+      }
+    } catch (error) {
+      onShowToast("⚠️ Gagal mencari lokasi karena masalah jaringan.");
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
   const handleSelectCoordsFromMap = (selectedLat: number, selectedLng: number, placeName?: string) => {
     setCoords({ lat: selectedLat, lng: selectedLng });
     if (placeName) setLocationName(placeName);
@@ -127,8 +141,9 @@ export default function CameraHome({ memories, onAddMemory, onNavigateTab, onSho
   };
 
   const handleSaveCapturedMemory = () => {
-    if (!capturedImage || !caption.trim()) {
-      onShowToast("⚠️ Harap tulis caption momen terlebih dahulu!");
+    // VALIDASI KETAT SEBELUM SIMPAN
+    if (!isFormValid) {
+      onShowToast("🚨 Data belum lengkap! Pastikan cerita, nama tempat, dan GPS sudah terisi.");
       return;
     }
     setIsSaving(true);
@@ -144,11 +159,11 @@ export default function CameraHome({ memories, onAddMemory, onNavigateTab, onSho
       author: "Memory Our",
       avatar: "⚡",
       date: todayFormatted,
-      location: locationName.trim() || "Padang, Sumatera Barat",
-      imageUrl: capturedImage,
+      location: locationName.trim(),
+      imageUrl: capturedImage!, // capturedImage sudah pasti ada karena isFormValid
       caption: caption,
-      lat: coords?.lat,
-      lng: coords?.lng,
+      lat: coords!.lat, // coords sudah pasti ada karena isFormValid
+      lng: coords!.lng,
     };
 
     onAddMemory(newMemory);
@@ -200,10 +215,9 @@ export default function CameraHome({ memories, onAddMemory, onNavigateTab, onSho
         )}
       </div>
 
-      {/* KONTROL BAWAH KAMERA (SIMETRIS: GALERI - JEPRET - RIWAYAT) */}
+      {/* KONTROL BAWAH KAMERA */}
       {!capturedImage ? (
         <div className="w-full flex items-center justify-around pt-3 pb-2 px-2">
-          {/* Tombol Galeri di Kiri */}
           <button
             onClick={() => fileInputRef.current?.click()}
             className="w-12 h-12 rounded-2xl bg-slate-800/80 hover:bg-slate-700 flex items-center justify-center border border-white/10 shadow-lg text-white transition cursor-pointer"
@@ -212,7 +226,6 @@ export default function CameraHome({ memories, onAddMemory, onNavigateTab, onSho
             <ImageIcon className="w-5 h-5 text-sky-400" />
           </button>
 
-          {/* Tombol Jepret Utama di Tengah */}
           <button
             onClick={() => captureInputRef.current?.click()}
             className="w-20 h-20 rounded-full border-4 border-sky-500 flex items-center justify-center p-1 shadow-2xl active:scale-95 transition cursor-pointer bg-black/20 shadow-sky-500/30"
@@ -222,14 +235,13 @@ export default function CameraHome({ memories, onAddMemory, onNavigateTab, onSho
             </div>
           </button>
 
-          {/* Tombol Riwayat dengan Thumbnail di Kanan */}
           <button
             onClick={() => onNavigateTab("calendar")}
             className="w-12 h-12 rounded-2xl overflow-hidden border-2 border-sky-400/50 bg-slate-800 shadow-lg transition active:scale-95 cursor-pointer relative group"
             title="Lihat Riwayat"
           >
             <img 
-              src={memories.length > 0 ? memories[0].imageUrl : "/foto-kita.jpg"}
+              src={memories.length > 0 ? memories[0].imageUrl : "/foto-kita.jpg"} 
               alt="Riwayat" 
               className="w-full h-full object-cover group-hover:scale-110 transition-transform" 
             />
@@ -239,7 +251,7 @@ export default function CameraHome({ memories, onAddMemory, onNavigateTab, onSho
       ) : (
         <div className="w-full space-y-2.5 pt-2 pb-1 animate-in fade-in duration-200 bg-slate-900/90 backdrop-blur-xl p-3.5 rounded-3xl border border-sky-500/20 shadow-xl">
           <div>
-            <label className="text-[11px] font-bold text-slate-300 block mb-1">Cerita Momen</label>
+            <label className="text-[11px] font-bold text-slate-300 block mb-1">Cerita Momen <span className="text-red-400">*</span></label>
             <input
               type="text"
               value={caption}
@@ -251,7 +263,7 @@ export default function CameraHome({ memories, onAddMemory, onNavigateTab, onSho
 
           <div>
             <div className="flex justify-between items-center mb-1">
-              <label className="text-[11px] font-bold text-slate-300">Nama Tempat / Lokasi</label>
+              <label className="text-[11px] font-bold text-slate-300">Nama Tempat / Lokasi <span className="text-red-400">*</span></label>
               {coords && (
                 <span className="text-[10px] bg-emerald-950 text-emerald-400 font-bold px-2 py-0.5 rounded-full border border-emerald-500/30 flex items-center gap-1">
                   <Lock className="w-3 h-3" /> Pin Terkunci
@@ -260,15 +272,29 @@ export default function CameraHome({ memories, onAddMemory, onNavigateTab, onSho
             </div>
 
             <div className="space-y-1.5">
-              <div className="relative">
+              <div className="relative flex items-center">
                 <MapPin className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
                   placeholder="Contoh: Pantai Padang"
                   value={locationName}
                   onChange={(e) => setLocationName(e.target.value)}
-                  className="w-full text-xs pl-9 pr-3.5 py-2 rounded-xl border border-slate-700 focus:outline-none focus:border-sky-400 bg-slate-950 text-white placeholder:text-slate-500 shadow-inner"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleSearchLocation();
+                    }
+                  }}
+                  className="w-full text-xs pl-9 pr-16 py-2 rounded-xl border border-slate-700 focus:outline-none focus:border-sky-400 bg-slate-950 text-white placeholder:text-slate-500 shadow-inner"
                 />
+                <button 
+                  type="button" 
+                  onClick={handleSearchLocation}
+                  disabled={isSearching || !locationName.trim()}
+                  className="absolute right-1.5 top-1/2 -translate-y-1/2 bg-sky-500/20 text-sky-400 px-2.5 py-1 rounded-lg text-[10px] font-bold hover:bg-sky-500/40 transition disabled:opacity-50 cursor-pointer"
+                >
+                  {isSearching ? "Mencari.." : "Cari"}
+                </button>
               </div>
 
               <div className="grid grid-cols-2 gap-2">
@@ -308,35 +334,34 @@ export default function CameraHome({ memories, onAddMemory, onNavigateTab, onSho
             )}
           </div>
 
-          <div className="grid grid-cols-3 gap-2 pt-0.5">
+          <div className="grid grid-cols-2 gap-2 pt-0.5">
             <button
               onClick={() => {
                 setCapturedImage(null);
                 setCoords(null);
                 setShowMapPicker(false);
               }}
-              className="py-2 rounded-xl bg-slate-800 text-slate-300 text-[11px] font-bold hover:bg-slate-700 transition cursor-pointer"
+              className="py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-bold hover:bg-slate-700 transition cursor-pointer"
             >
-              Ulangi
+              Ulangi / Ganti Foto
             </button>
-
-            {/* Tombol Putar/Balik Gambar (Mirror Flip) */}
-            <button
-              onClick={handleFlipImage}
-              className="py-2 rounded-xl bg-sky-950/80 text-sky-300 border border-sky-500/30 text-[11px] font-bold hover:bg-sky-900 transition cursor-pointer flex items-center justify-center gap-1"
-              title="Balik Posisi Foto"
-            >
-              <FlipHorizontal className="w-3.5 h-3.5" />
-              <span>Putar</span>
-            </button>
-
             <button
               onClick={handleSaveCapturedMemory}
-              disabled={isSaving}
-              className="py-2 rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 text-white text-[11px] font-bold shadow-lg shadow-sky-500/30 hover:opacity-90 transition cursor-pointer flex items-center justify-center gap-1 border border-sky-400/40"
+              disabled={!isFormValid || isSaving}
+              className={`py-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 border ${
+                isFormValid
+                  ? "bg-gradient-to-r from-sky-500 to-blue-600 text-white shadow-lg shadow-sky-500/30 border-sky-400/40 hover:opacity-90 cursor-pointer"
+                  : "bg-slate-800 text-slate-500 border-slate-700 cursor-not-allowed opacity-70"
+              }`}
             >
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>Simpan</span>
+              {isFormValid ? (
+                <>
+                  <Sparkles className="w-4 h-4" />
+                  <span>Simpan Momen</span>
+                </>
+              ) : (
+                "Lengkapi Data Dulu"
+              )}
             </button>
           </div>
         </div>
