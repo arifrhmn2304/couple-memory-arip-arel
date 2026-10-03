@@ -229,7 +229,7 @@ export default function CameraHome({ memories, onAddMemory, onNavigateTab, onSho
             title="Lihat Riwayat"
           >
             <img 
-              src={memories.length > 0 ? memories[0].imageUrl : "https://images.unsplash.com/photo-1518199266791-5375a83190b7?w=100"} 
+              src={memories.length > 0 ? memories[0].imageUrl : "/foto-kita.jpg"}
               alt="Riwayat" 
               className="w-full h-full object-cover group-hover:scale-110 transition-transform" 
             />
