@@ -18,47 +18,35 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState("home");
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // 1. INISIALISASI 0 MS: Langsung baca dari localStorage HP jika ada
-  const [memories, setMemories] = useState<MemoryItem[]>(() => {
-    if (typeof window !== "undefined") {
-      const cached = localStorage.getItem("our_memories_cache");
-      if (cached) {
-        try { return JSON.parse(cached); } catch (e) { console.error(e); }
-      }
-    }
-    return [];
-  });
-
-  const [bucketItems, setBucketItems] = useState<BucketItem[]>(() => {
-    if (typeof window !== "undefined") {
-      const cached = localStorage.getItem("our_bucket_cache");
-      if (cached) {
-        try { return JSON.parse(cached); } catch (e) { console.error(e); }
-      }
-    }
-    return [];
-  });
+  // Mulai dengan array kosong untuk mencegah bentrok SSR Next.js
+  const [memories, setMemories] = useState<MemoryItem[]>([]);
+  const [bucketItems, setBucketItems] = useState<BucketItem[]>([]);
+  
+  // State indikator supaya cache HP tidak terhapus duluan saat awal muat
+  const [isAppReady, setIsAppReady] = useState(false);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3000);
   };
 
-  // 2. Simpan otomatis ke localStorage setiap kali datanya berubah
+  // 1. BACA CACHE LOKAL (INSTAN 0 DETIK) & SYNC SUPABASE
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem("our_memories_cache", JSON.stringify(memories));
-    }
-  }, [memories]);
+    // --- TAMPILKAN DARI MEMORI HP LEBIH DULU ---
+    try {
+      const cachedMemories = window.localStorage.getItem("our_memories_cache");
+      if (cachedMemories) setMemories(JSON.parse(cachedMemories));
 
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem("our_bucket_cache", JSON.stringify(bucketItems));
+      const cachedBucket = window.localStorage.getItem("our_bucket_cache");
+      if (cachedBucket) setBucketItems(JSON.parse(cachedBucket));
+    } catch (e) {
+      console.warn("Gagal baca cache lokal:", e);
     }
-  }, [bucketItems]);
 
-  // 3. Sinkronisasi background dari Supabase setelah halaman terbuka secara instan
-  useEffect(() => {
+    // Tandai bahwa cache sudah berhasil dibaca
+    setIsAppReady(true);
+
+    // --- DIAM-DIAM TARIK DATA BARU DARI SUPABASE DI BACKGROUND ---
     async function syncDataFromSupabase() {
       try {
         const { data: memData } = await supabase
@@ -90,12 +78,34 @@ export default function Home() {
           setBucketItems(bucketData);
         }
       } catch (err) {
-        console.error("Background sync error (menggunakan cache lokal):", err);
+        console.error("Background sync error:", err);
       }
     }
 
     syncDataFromSupabase();
   }, []);
+
+  // 2. SIMPAN OTOMATIS KE HP HANYA JIKA APP SUDAH READY
+  // (Mencegah data tertimpa array kosong saat aplikasi pertama dirender)
+  useEffect(() => {
+    if (isAppReady) {
+      try {
+        window.localStorage.setItem("our_memories_cache", JSON.stringify(memories));
+      } catch (error) {
+        console.warn("Gagal menyimpan cache memori ke HP:", error);
+      }
+    }
+  }, [memories, isAppReady]);
+
+  useEffect(() => {
+    if (isAppReady) {
+      try {
+        window.localStorage.setItem("our_bucket_cache", JSON.stringify(bucketItems));
+      } catch (error) {
+        console.warn("Gagal menyimpan cache bucket ke HP:", error);
+      }
+    }
+  }, [bucketItems, isAppReady]);
 
   // 4. Tambah Memory & Simpan ke Supabase
   const handleAddMemory = async (newMemory: MemoryItem) => {
