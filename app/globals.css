@@ -1,0 +1,97 @@
+@import url('https://unpkg.com/leaflet@1.9.4/dist/leaflet.css');
+@import "tailwindcss";
+
+:root {
+  --background: #020617; /* Obsidian Dark Default */
+  --foreground: #f8fafc;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Sembunyikan scrollbar tapi tetap bisa digeser */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+@keyframes pulse-zoom {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.03); }
+}
+
+.animate-pulse-zoom {
+  animation: pulse-zoom 3s infinite ease-in-out;
+}
+
+/* --- PURE GLASSMORPHISM POPUP ALA APPLE IOS --- */
+
+/* Menghilangkan background kotak dasar dan tip/segitiga bawaan */
+.custom-modern-popup .leaflet-popup-content-wrapper {
+  background: rgba(2, 6, 23, 0.85) !important;
+  backdrop-filter: blur(28px) !important;
+  -webkit-backdrop-filter: blur(28px) !important;
+  color: #f8fafc !important;
+  border: 1px solid rgba(56, 189, 248, 0.25) !important;
+  border-radius: 28px !important;
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.85), inset 0 1px 0 rgba(255, 255, 255, 0.15) !important;
+  padding: 6px !important;
+}
+
+/* Hilangkan panah/tip bawah agar melayang bebas */
+.custom-modern-popup .leaflet-popup-tip-container {
+  display: none !important;
+}
+
+.custom-modern-popup .leaflet-popup-content {
+  margin: 12px 14px !important;
+  line-height: normal !important;
+}
+
+/* Tombol Close Mengapung Minimalis */
+.leaflet-container a.leaflet-popup-close-button {
+  background: rgba(15, 23, 42, 0.8) !important;
+  backdrop-filter: blur(10px) !important;
+  color: #38bdf8 !important;
+  border-radius: 50% !important;
+  width: 28px !important;
+  height: 28px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  top: 10px !important;
+  right: 10px !important;
+  border: 1px solid rgba(56, 189, 248, 0.3) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5) !important;
+  transition: all 0.2s ease !important;
+}
+
+.leaflet-container a.leaflet-popup-close-button:hover {
+  background: rgba(56, 189, 248, 0.2) !important;
+  transform: scale(1.05);
+}
+
+/* Efek Live Photo: Foto berdenyut/gerak halus berulang setiap beberapa detik */
+@keyframes livePhotoLoop {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+.animate-live-photo {
+  animation: livePhotoLoop 6s ease-in-out infinite;
+}
