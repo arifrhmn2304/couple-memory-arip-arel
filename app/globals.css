@@ -11,15 +11,29 @@
   --color-foreground: var(--foreground);
 }
 
-body {
+/* PERBAIKAN UTAMA: Sembunyikan scrollbar secara total di HTML & Body untuk semua browser */
+html, body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+  overflow-x: hidden;
+  /* Sembunyikan scrollbar untuk IE, Edge, dan Firefox */
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
-/* Sembunyikan scrollbar tapi tetap bisa digeser */
+/* Sembunyikan scrollbar untuk Chrome, Safari, dan Opera */
+html::-webkit-scrollbar, 
+body::-webkit-scrollbar,
+*::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+/* Utilitas kelas tambahan jika dibutuhkan pada elemen tertentu */
 .no-scrollbar::-webkit-scrollbar {
-  display: none;
+  display: none !important;
 }
 .no-scrollbar {
   -ms-overflow-style: none;
