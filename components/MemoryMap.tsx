@@ -21,22 +21,22 @@ interface MemoryMapProps {
 
 export default function MemoryMap({ memories }: MemoryMapProps) {
   return (
-    <div className="w-full px-4 pb-32 space-y-4">
-      {/* Header Info Peta */}
-      <div className="bg-slate-900/95 backdrop-blur-2xl rounded-[28px] p-4 border border-sky-500/25 shadow-2xl shadow-sky-950/80 flex items-center justify-between">
+    <div className="w-full pb-32 space-y-4">
+      {/* Header Info Peta (Ukuran disamakan dengan Header & To-Do List) */}
+      <div className="w-full bg-slate-900/95 backdrop-blur-2xl rounded-3xl p-4 border border-sky-500/25 shadow-2xl shadow-sky-950/80 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-full bg-sky-950 border border-sky-500/40 flex items-center justify-center text-sm shadow-inner shrink-0">
-            <MapPin className="w-4 h-4 text-sky-400" />
+          <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-sky-500/20 to-blue-600/10 border border-sky-500/30 flex items-center justify-center text-sm shadow-inner shrink-0">
+            <MapPin className="w-5 h-5 text-sky-400" />
           </div>
           <div>
             <h3 className="text-xs font-extrabold text-white">Peta Kenangan</h3>
-            <p className="text-[9px] font-bold text-sky-400">
+            <p className="text-[10px] font-bold text-sky-400 mt-0.5">
               {memories.length} Pin Tempat Yang Sudah Kita Kunjungi
             </p>
           </div>
         </div>
 
-        <span className="text-[9px] font-bold text-sky-300 bg-sky-950/80 px-2.5 py-1 rounded-full border border-sky-500/30 flex items-center gap-1 shadow-inner">
+        <span className="text-[9px] font-bold text-sky-300 bg-sky-950/80 px-2.5 py-1.5 rounded-full border border-sky-500/30 flex items-center gap-1 shadow-inner">
           <Sparkles className="w-2.5 h-2.5 text-sky-400" />
           <span>Lokasi Kita</span>
         </span>
@@ -49,7 +49,7 @@ export default function MemoryMap({ memories }: MemoryMapProps) {
 
       {/* Footer Info Tips */}
       <div className="p-3.5 bg-slate-900/95 backdrop-blur-2xl rounded-[24px] border border-sky-500/20 text-center shadow-lg">
-        <p className="text-[9px] text-slate-300 font-medium">
+        <p className="text-[10px] text-slate-300 font-medium">
           💡 Klik ikon Foto di peta untuk melihat foto & kenangan tempat tersebut!
         </p>
       </div>

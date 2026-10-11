@@ -39,11 +39,11 @@ export default function BottomNav({ activeTab, setActiveTab }: BottomNavProps) {
 
   return (
     <div 
-      className={`fixed left-1/2 -translate-x-1/2 z-50 w-[92%] max-w-md transition-all duration-500 ease-in-out ${
-        isVisible ? "bottom-6 opacity-100 translate-y-0" : "-bottom-24 opacity-0 translate-y-10"
+      className={`fixed left-1/2 -translate-x-1/2 z-50 w-full max-w-md px-4 transition-all duration-500 ease-in-out ${
+        isVisible ? "bottom-10 opacity-100 translate-y-0" : "-bottom-24 opacity-0 translate-y-10"
       }`}
     >
-      <nav className="bg-slate-900/90 backdrop-blur-2xl border border-sky-500/30 p-2 rounded-3xl shadow-2xl shadow-black/90 flex items-center justify-around">
+      <nav className="w-full bg-slate-900/95 backdrop-blur-2xl border border-sky-500/30 p-2 rounded-[28px] shadow-2xl shadow-black/90 flex items-center justify-around">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -52,7 +52,7 @@ export default function BottomNav({ activeTab, setActiveTab }: BottomNavProps) {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className="relative py-2.5 px-3 flex-1 rounded-2xl flex flex-col items-center justify-center transition-all cursor-pointer"
+              className="relative py-2.5 px-2 flex-1 rounded-2xl flex flex-col items-center justify-center transition-all cursor-pointer"
             >
               {isActive && (
                 <motion.div

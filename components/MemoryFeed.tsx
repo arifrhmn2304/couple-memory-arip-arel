@@ -26,8 +26,8 @@ export default function MemoryFeed({ memories = [], onDeleteMemory, onShowToast 
 
   if (memories.length === 0) {
     return (
-      <div className="w-full px-4 pb-24 space-y-4">
-        <div className="bg-slate-900/90 backdrop-blur-xl p-8 rounded-3xl border border-dashed border-sky-500/30 text-center space-y-3 h-[65vh] flex flex-col items-center justify-center shadow-2xl">
+      <div className="w-full pb-24 space-y-4">
+        <div className="bg-slate-900/90 backdrop-blur-xl p-8 rounded-3xl border border-dashed border-sky-500/30 text-center space-y-3 h-[60vh] flex flex-col items-center justify-center shadow-2xl">
           <span className="text-5xl animate-bounce">📸</span>
           <h4 className="text-sm font-bold text-white">Belum Ada Momen Tersimpan</h4>
           <p className="text-xs text-slate-400 max-w-[260px]">
@@ -41,7 +41,7 @@ export default function MemoryFeed({ memories = [], onDeleteMemory, onShowToast 
   const handleTouchStart = (id: string) => {
     pressTimer.current = setTimeout(() => {
       setDeleteId(id);
-    }, 700); // Tahan selama kurang lebih 0.7 detik
+    }, 700);
   };
 
   const handleTouchEnd = () => {
@@ -100,7 +100,7 @@ export default function MemoryFeed({ memories = [], onDeleteMemory, onShowToast 
 
   return (
     <>
-      <div className="w-full max-w-sm mx-auto px-4 pb-32 space-y-6 overflow-y-auto no-scrollbar">
+      <div className="w-full pb-32 space-y-6 overflow-y-auto no-scrollbar">
         {memories.map((item) => (
           <div
             key={item.id}
@@ -124,7 +124,7 @@ export default function MemoryFeed({ memories = [], onDeleteMemory, onShowToast 
               <img
                 src={item.imageUrl}
                 alt={item.caption}
-                className="relative z-10 w-full h-full object-cover animate-live-photo transition-transform duration-700 hover:scale-105 pointer-events-none"
+                className="relative z-10 w-full h-full object-cover transition-transform duration-700 hover:scale-105 pointer-events-none"
               />
 
               <div className="absolute bottom-3 right-3 z-20 bg-black/40 backdrop-blur-md px-3 py-1 rounded-full text-white/90 text-[10px] font-medium flex items-center gap-1.5 shadow-lg border border-white/10 pointer-events-none">
@@ -151,10 +151,9 @@ export default function MemoryFeed({ memories = [], onDeleteMemory, onShowToast 
           </div>
         ))}
         
-        <div className="h-32 w-full shrink-0 pointer-events-none"></div>
+        <div className=" w-full shrink-0 pointer-events-none"></div>
       </div>
 
-      {/* MODAL FULLSCREEN FOTO */}
       {isMounted && createPortal(
         <AnimatePresence>
           {activeMemory && (
@@ -218,7 +217,6 @@ export default function MemoryFeed({ memories = [], onDeleteMemory, onShowToast 
         document.body
       )}
 
-      {/* POP-UP KONFIRMASI HAPUS MOMEN (SAAT FOTO DITAHAN) */}
       {isMounted && createPortal(
         <AnimatePresence>
           {deleteId && (
@@ -240,7 +238,7 @@ export default function MemoryFeed({ memories = [], onDeleteMemory, onShowToast 
                 
                 <div className="space-y-1">
                   <h4 className="font-bold text-white text-sm">Hapus Kenangan Ini?</h4>
-                  <p className="text-[8px] text-slate-400">
+                  <p className="text-[10px] text-slate-400">
                     Momen manis ini akan dihapus permanen dari daftar kenangan kalian.
                   </p>
                 </div>

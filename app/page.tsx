@@ -78,23 +78,17 @@ export default function Home() {
     setIsAppReady(true);
     fetchAllData();
 
-    // --- FITUR REALTIME SUPABASE ---
-    // Otomatis update data saat ada perubahan dari perangkat lain (pasangan)
     const channel = supabase
       .channel("schema-db-changes")
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "memories" },
-        () => {
-          fetchAllData();
-        }
+        () => { fetchAllData(); }
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "bucket_list" },
-        () => {
-          fetchAllData();
-        }
+        () => { fetchAllData(); }
       )
       .subscribe();
 
@@ -204,16 +198,17 @@ export default function Home() {
   };
 
   return (
-    <main className="min-h-screen bg-slate-950 text-white relative pb-32 overflow-x-hidden select-none">
+    <main className="min-h-screen bg-slate-950 text-white relative overflow-x-hidden select-none flex flex-col items-center">
       <div className="fixed top-[-100px] left-1/2 -translate-x-1/2 w-[500px] h-[300px] bg-sky-500/10 blur-[120px] pointer-events-none rounded-full z-0" />
       <div className="fixed bottom-[-50px] right-[-50px] w-[300px] h-[300px] bg-blue-600/10 blur-[100px] pointer-events-none rounded-full z-0" />
 
       <Toast message={toastMessage} onClose={() => setToastMessage(null)} />
 
-      <div className="relative z-10 max-w-md mx-auto">
+      {/* KONTAINER UTAMA TERKUNCI UKURANNYA AGAR SERAGAM DAN RESPONSIF */}
+      <div className="relative z-10 w-full max-w-md mx-auto flex flex-col min-h-screen px-4 pb-28">
         <DashboardHeader />
 
-        <div className="px-4">
+        <div className="w-full flex-1 mt-2 flex flex-col">
           <AnimatePresence mode="wait">
             <motion.div
               key={activeTab}
@@ -221,14 +216,17 @@ export default function Home() {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -15, scale: 0.98 }}
               transition={{ duration: 0.25, ease: "easeOut" }}
+              className="w-full flex-1 flex flex-col"
             >
               {activeTab === "home" && (
-                <CameraHome
-                  memories={memories}
-                  onAddMemory={handleAddMemory}
-                  onNavigateTab={(tab) => setActiveTab(tab)}
-                  onShowToast={showToast}
-                />
+                <div className="w-full flex-1 flex flex-col justify-center items-center my-auto">
+                  <CameraHome
+                    memories={memories}
+                    onAddMemory={handleAddMemory}
+                    onNavigateTab={(tab) => setActiveTab(tab)}
+                    onShowToast={showToast}
+                  />
+                </div>
               )}
 
               {activeTab === "feed" && (

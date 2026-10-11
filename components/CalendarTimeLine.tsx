@@ -58,6 +58,7 @@ export default function CalendarTimeline({ memories = [], onShowToast }: Calenda
       { name: "desember", keywords: ["des", "dec", "desember"] },
     ];
 
+    // MENTOK DI BULAN BERJALAN SAJA (TIDAK ADA BULAN KOSONG DI BAWAHNYA)
     for (let m = 0; m <= currentMonth; m++) {
       const targetDate = new Date(currentYear, m, 1);
       const year = targetDate.getFullYear();
@@ -124,7 +125,7 @@ export default function CalendarTimeline({ memories = [], onShowToast }: Calenda
 
   return (
     <>
-      <div className="w-full px-4 pb-32 space-y-6 overflow-y-auto no-scrollbar">
+      <div className="w-full pb-32 space-y-6 overflow-y-auto no-scrollbar">
         {timelineMonths.map((monthData, monthIndex) => {
           const days = Array.from({ length: monthData.daysInMonth }, (_, i) => i + 1);
           
@@ -133,12 +134,12 @@ export default function CalendarTimeline({ memories = [], onShowToast }: Calenda
           const currentDayNum = currentDate.getDate();
 
           return (
+          <div key={monthIndex} className="w-full space-y-4">
+            {/* Kotak Kartu Bulan */}
             <div 
-              key={monthIndex}
               ref={isCurrentMonth ? currentMonthRef : null}
               className="bg-slate-900/95 backdrop-blur-xl rounded-[32px] p-5 shadow-2xl border border-sky-500/20 relative z-10 w-full overflow-hidden"
             >
-              {/* EFEK 2 KOTAK / 3D BANNER UNTUK NAMA BULAN */}
               <div className="mb-5 bg-slate-950/60 backdrop-blur-md px-4 py-3 rounded-2xl border border-white/10 shadow-[inset_0_2px_4px_rgba(255,255,255,0.06),0_10px_20px_rgba(0,0,0,0.4)] flex items-center justify-between">
                 <h3 className="text-white font-bold text-sm tracking-wide">
                   {monthData.title}
@@ -187,10 +188,33 @@ export default function CalendarTimeline({ memories = [], onShowToast }: Calenda
                 })}
               </div>
             </div>
+
+            {/* GARIS ROLLER COASTER DENGAN PUTARAN LINGKARAN 360° ANTAR BULAN */}
+            {monthIndex < timelineMonths.length - 1 && (
+              <div className="w-full flex justify-center py-0 relative h-10">
+                {monthIndex % 3 === 0 ? (
+                  /* Roller Coaster Loop 360° ke Kanan */
+                  <svg className="w-15 h-15 text-sky-600/80 overflow-visible" viewBox="0 0 80 100" fill="none" stroke="currentColor" strokeWidth="3" strokeDasharray="5 4">
+                    <path d="M40 0 C40 15, 65 15, 65 35 C65 55, 15 55, 15 35 C15 15, 40 25, 40 80" strokeLinecap="round" />
+                  </svg>
+                ) : monthIndex % 3 === 1 ? (
+                  /* Roller Coaster Loop 360° ke Kiri */
+                  <svg className="w-15 h-15 text-sky-600/80 overflow-visible" viewBox="0 0 80 100" fill="none" stroke="currentColor" strokeWidth="3" strokeDasharray="4 4">
+                    <path d="M40 0 C40 15, 15 15, 15 35 C15 55, 65 55, 65 35 C65 15, 40 25, 40 80" strokeLinecap="round" />
+                  </svg>
+                ) : (
+                  /* Roller Coaster Double Loop / S-Curve Meliuk Dinamis */
+                  <svg className="w-15 h-15 text-sky-600/80 overflow-visible" viewBox="0 0 80 100" fill="none" stroke="currentColor" strokeWidth="3" strokeDasharray="6 3">
+                    <path d="M40 0 C 70 20, 10 40, 40 40 C 70 40, 10 60, 40 80" strokeLinecap="round" />
+                  </svg>
+                )}
+              </div>
+            )}
+          </div>
           );
         })}
         
-        <div className="h-32 w-full shrink-0 pointer-events-none"></div>
+        <div className="w-full shrink-0 pointer-events-none"></div>
       </div>
 
       {isMounted && createPortal(

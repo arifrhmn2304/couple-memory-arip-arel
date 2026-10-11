@@ -69,7 +69,7 @@ export default function BucketList({
   };
 
   return (
-    <div className="w-full px-4 pb-24 space-y-4">
+    <div className="w-full pb-24 space-y-4">
       {/* Banner Title */}
       <div className="bg-gradient-to-br from-slate-900/95 via-slate-900/80 to-blue-950/90 backdrop-blur-2xl p-4 rounded-3xl border border-sky-500/30 shadow-xl flex items-center justify-between">
         <div>
@@ -144,7 +144,6 @@ export default function BucketList({
                     : "bg-slate-900/95 border-sky-500/30 text-white shadow-lg hover:border-sky-400/50"
                 }`}
               >
-                {/* Checkbox & Judul Teks (Bisa Turun ke Bawah / Wrap) */}
                 <div
                   onClick={() => onToggleItem && onToggleItem(item.id)}
                   className="flex items-start gap-3 cursor-pointer flex-1 min-w-0"
@@ -166,7 +165,6 @@ export default function BucketList({
                   </span>
                 </div>
 
-                {/* Badge Category & Tombol Hapus */}
                 <div className="flex flex-col sm:flex-row items-end sm:items-center gap-2 shrink-0">
                   <span
                     className={`text-[10px] font-semibold px-2.5 py-1 rounded-full border flex items-center gap-1 ${badge.bg}`}
@@ -193,7 +191,6 @@ export default function BucketList({
         )}
       </div>
 
-      {/* POPUP KONFIRMASI HAPUS TO-DO LIST */}
       {deleteId && (
         <div className="fixed inset-0 z-[200] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-slate-900 border border-rose-500/30 rounded-3xl p-5 max-w-xs w-full text-center space-y-4 shadow-2xl animate-in fade-in zoom-in duration-200">

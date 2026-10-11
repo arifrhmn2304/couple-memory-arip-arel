@@ -34,7 +34,6 @@ export default function CameraHome({ memories, onAddMemory, onNavigateTab, onSho
   const [locationName, setLocationName] = useState<string>("");
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   
-  // State untuk tanggal kustom (default ke tanggal hari ini dalam format YYYY-MM-DD)
   const todayStr = new Date().toISOString().split("T")[0];
   const [customDate, setCustomDate] = useState<string>(todayStr);
 
@@ -43,7 +42,6 @@ export default function CameraHome({ memories, onAddMemory, onNavigateTab, onSho
   const [isSearching, setIsSearching] = useState<boolean>(false);
   const [isSaving, setIsSaving] = useState<boolean>(false);
 
-  // KUNCI GEMBOK 4 PILAR
   const isFormValid = Boolean(
     capturedImage && 
     caption.trim() !== "" && 
@@ -57,7 +55,6 @@ export default function CameraHome({ memories, onAddMemory, onNavigateTab, onSho
 
     let fileToProcess = file;
 
-    // Konversi file HEIC dari iPhone
     if (file.type === "image/heic" || file.name.toLowerCase().endsWith(".heic")) {
       onShowToast("🔄 Mengonversi foto resolusi tinggi...");
       try {
@@ -87,7 +84,6 @@ export default function CameraHome({ memories, onAddMemory, onNavigateTab, onSho
     reader.readAsDataURL(fileToProcess);
   };
 
-  // Fungsi untuk Mirror Foto (membalik orientasi horizontal foto)
   const handleMirrorImage = () => {
     if (!capturedImage) return;
     const img = new Image();
@@ -167,14 +163,12 @@ export default function CameraHome({ memories, onAddMemory, onNavigateTab, onSho
   };
 
   const handleSaveCapturedMemory = () => {
-    // VALIDASI KETAT SEBELUM SIMPAN
     if (!isFormValid) {
       onShowToast("🚨 Data belum lengkap! Pastikan cerita, nama tempat, dan GPS sudah terisi.");
       return;
     }
     setIsSaving(true);
 
-    // Format tanggal kustom yang dipilih (misal: "11 Okt 2026")
     const dateObj = new Date(customDate);
     const formattedDate = dateObj.toLocaleDateString("id-ID", {
       day: "numeric",
@@ -186,7 +180,7 @@ export default function CameraHome({ memories, onAddMemory, onNavigateTab, onSho
       id: Date.now().toString(),
       author: "Memory Our",
       avatar: "⚡",
-      date: formattedDate, // Menggunakan tanggal pilihan kustom
+      date: formattedDate,
       location: locationName.trim(),
       imageUrl: capturedImage!, 
       caption: caption,
@@ -207,9 +201,8 @@ export default function CameraHome({ memories, onAddMemory, onNavigateTab, onSho
   };
 
   return (
-    <div className="w-full max-w-sm mx-auto px-4 pb-28 flex flex-col items-center justify-between min-h-[80vh]">
+    <div className="w-full min-h-[68vh] flex flex-col items-center justify-center my-auto pb-24">
       
-      {/* INPUT TERSEMBUNYI UNTUK NATIVE CAMERA & GALERI */}
       <input 
         type="file" 
         accept="image/*" 
@@ -227,10 +220,10 @@ export default function CameraHome({ memories, onAddMemory, onNavigateTab, onSho
         className="hidden" 
       />
 
-      {/* JENDELA PREVIEW UTAMA */}
+      {/* JENDELA PREVIEW UTAMA (UKURAN FULL SELEBAR HEADER & KONTANIER UTAMA) */}
       <div 
         onClick={() => !capturedImage && captureInputRef.current?.click()}
-        className={`relative w-full aspect-square max-h-[50vh] bg-black rounded-[36px] overflow-hidden shadow-2xl border border-white/10 flex items-center justify-center my-0.5 ${!capturedImage ? 'cursor-pointer active:scale-[0.98] transition-transform' : ''}`}
+        className={`relative w-full aspect-square bg-black rounded-[32px] overflow-hidden shadow-2xl border border-white/10 flex items-center justify-center my-auto ${!capturedImage ? 'cursor-pointer active:scale-[0.98] transition-transform' : ''}`}
       >
         {!capturedImage ? (
           <div className="flex flex-col items-center justify-center space-y-4 opacity-60">
@@ -246,7 +239,7 @@ export default function CameraHome({ memories, onAddMemory, onNavigateTab, onSho
 
       {/* KONTROL BAWAH KAMERA */}
       {!capturedImage ? (
-        <div className="w-full flex items-center justify-around pt-3 pb-2 px-2">
+        <div className="w-full flex items-center justify-around pt-4 pb-2">
           <button
             onClick={() => fileInputRef.current?.click()}
             className="w-12 h-12 rounded-2xl bg-slate-800/80 hover:bg-slate-700 flex items-center justify-center border border-white/10 shadow-lg text-white transition cursor-pointer"
@@ -278,10 +271,8 @@ export default function CameraHome({ memories, onAddMemory, onNavigateTab, onSho
           </button>
         </div>
       ) : (
-        /* DITAMBAHKAN JARAK LEBIH LEGA (mt-3) AGAR TIDAK MEPET DENGAN PREVIEW FOTO */
-        <div className="w-full space-y-3 mt-3 pt-2 pb-2 animate-in fade-in duration-200 bg-slate-900/90 backdrop-blur-xl p-4 rounded-3xl border border-sky-500/20 shadow-xl">
+        <div className="w-full space-y-3 mt-4 pt-2 pb-2 animate-in fade-in duration-200 bg-slate-900/90 backdrop-blur-xl p-4 rounded-3xl border border-sky-500/20 shadow-xl">
           
-          {/* TOMBOL MIRROR FOTO */}
           <div className="flex justify-between items-center">
             <span className="text-[11px] font-bold text-slate-300">Pengaturan Foto</span>
             <button
@@ -293,7 +284,6 @@ export default function CameraHome({ memories, onAddMemory, onNavigateTab, onSho
             </button>
           </div>
 
-          {/* PILIH TANGGAL KUSTOM (BACKDATE MEMORY) */}
           <div>
             <label className="text-[11px] font-bold text-slate-300 block mb-1">
               Tanggal Kenangan <span className="text-red-400">*</span>
