@@ -31,7 +31,7 @@ export default function DashboardHeader() {
   }, []);
 
   return (
-    <header className="w-full max-w-sm mx-auto px-4 pt-10 pb-3">
+    <header className="w-full px-4 pt-10 pb-3"> {/* Ubah max-w-sm menjadi w-full */}
       <div className="w-full bg-slate-900/90 backdrop-blur-2xl rounded-3xl p-4 border border-sky-500/20 shadow-2xl shadow-sky-950/50 relative overflow-hidden flex items-center justify-between">
         
         {/* Sisi Kiri: Info Hari Bersama */}

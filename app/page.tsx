@@ -20,58 +20,116 @@ export default function Home() {
 
   const [memories, setMemories] = useState<MemoryItem[]>([]);
   const [bucketItems, setBucketItems] = useState<BucketItem[]>([]);
+  const [isAppReady, setIsAppReady] = useState(false);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3000);
   };
 
-  // 1. Ambil data dari Supabase saat pertama kali dibuka
-  useEffect(() => {
-    async function fetchData() {
-      try {
-        const { data: memData } = await supabase
-          .from("memories")
-          .select("*")
-          .order("created_at", { ascending: false });
-        
-        if (memData) {
-          const formattedMemories: MemoryItem[] = memData.map((m: any) => ({
-            id: m.id,
-            author: m.author,
-            avatar: m.avatar,
-            date: m.date,
-            location: m.location,
-            imageUrl: m.image_url,
-            caption: m.caption,
-            lat: m.lat,
-            lng: m.lng,
-          }));
-          setMemories(formattedMemories);
-        }
-
-        const { data: bucketData } = await supabase
-          .from("bucket_list")
-          .select("*")
-          .order("created_at", { ascending: false });
-
-        if (bucketData) {
-          setBucketItems(bucketData);
-        }
-      } catch (err) {
-        console.error("Error fetching data:", err);
+  // Fungsi untuk menarik data terbaru dari Supabase
+  const fetchAllData = async () => {
+    try {
+      const { data: memData } = await supabase
+        .from("memories")
+        .select("*")
+        .order("created_at", { ascending: false });
+      
+      if (memData) {
+        const formattedMemories: MemoryItem[] = memData.map((m: any) => ({
+          id: m.id,
+          author: m.author,
+          avatar: m.avatar,
+          date: m.date,
+          location: m.location,
+          imageUrl: m.image_url,
+          caption: m.caption,
+          lat: m.lat,
+          lng: m.lng,
+        }));
+        setMemories(formattedMemories);
       }
+
+      const { data: bucketData } = await supabase
+        .from("bucket_list")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (bucketData) {
+        setBucketItems(bucketData);
+      }
+    } catch (err) {
+      console.error("Gagal sinkronisasi data:", err);
+    }
+  };
+
+  // 1. BACA CACHE LOKAL & SETUP REALTIME SUPABASE
+  useEffect(() => {
+    try {
+      const cachedMemories = window.localStorage.getItem("our_memories_cache");
+      if (cachedMemories) setMemories(JSON.parse(cachedMemories));
+
+      const cachedBucket = window.localStorage.getItem("our_bucket_cache");
+      if (cachedBucket) setBucketItems(JSON.parse(cachedBucket));
+    } catch (e) {
+      console.warn("Gagal baca cache lokal:", e);
     }
 
-    fetchData();
+    setIsAppReady(true);
+    fetchAllData();
+
+    // --- FITUR REALTIME SUPABASE ---
+    // Otomatis update data saat ada perubahan dari perangkat lain (pasangan)
+    const channel = supabase
+      .channel("schema-db-changes")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "memories" },
+        () => {
+          fetchAllData();
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "bucket_list" },
+        () => {
+          fetchAllData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
-  // 2. Tambah Memory & Simpan ke Supabase
+  // 2. SIMPAN CACHE KE HP
+  useEffect(() => {
+    if (isAppReady) {
+      try {
+        window.localStorage.setItem("our_memories_cache", JSON.stringify(memories));
+      } catch (error) {
+        console.warn("Gagal menyimpan cache memori:", error);
+      }
+    }
+  }, [memories, isAppReady]);
+
+  useEffect(() => {
+    if (isAppReady) {
+      try {
+        window.localStorage.setItem("our_bucket_cache", JSON.stringify(bucketItems));
+      } catch (error) {
+        console.warn("Gagal menyimpan cache bucket:", error);
+      }
+    }
+  }, [bucketItems, isAppReady]);
+
+  // 4. Tambah Memory & Simpan ke Supabase
   const handleAddMemory = async (newMemory: MemoryItem) => {
     setMemories((prev) => [newMemory, ...prev]);
     showToast("✨ Memory indah kalian berhasil disimpan!");
 
-    await supabase.from("memories").insert([
+    const { error } = await supabase.from("memories").insert([
       {
         id: newMemory.id,
         author: newMemory.author,
@@ -84,17 +142,24 @@ export default function Home() {
         lng: newMemory.lng,
       },
     ]);
+
+    if (error) {
+      showToast("⚠️ Gagal menyimpan ke server, tersimpan lokal.");
+    } else {
+      fetchAllData();
+    }
   };
 
-  // 3. Hapus Memory dari Supabase
+  // 5. Hapus Memory dari Supabase
   const handleDeleteMemory = async (id: string) => {
     setMemories((prev) => prev.filter((item) => item.id !== id));
     showToast("🗑️ Kenangan berhasil dihapus!");
 
     await supabase.from("memories").delete().eq("id", id);
+    fetchAllData();
   };
 
-  // 4. Tambah Bucket List & Simpan ke Supabase
+  // 6. Tambah Bucket List & Simpan ke Supabase
   const handleAddItem = async (newItem: BucketItem) => {
     setBucketItems((prev) => [newItem, ...prev]);
     showToast("🎯 Impian baru berhasil ditambahkan!");
@@ -107,9 +172,10 @@ export default function Home() {
         completed: newItem.completed,
       },
     ]);
+    fetchAllData();
   };
 
-  // 5. Update Status Checklist ke Supabase
+  // 7. Update Status Checklist ke Supabase
   const handleToggleItem = async (id: string) => {
     const targetItem = bucketItems.find((item) => item.id === id);
     if (!targetItem) return;
@@ -128,12 +194,13 @@ export default function Home() {
       .eq("id", id);
   };
 
-  // 6. Hapus Bucket List dari Supabase
+  // 8. Hapus Bucket List dari Supabase
   const handleDeleteItem = async (id: string) => {
     setBucketItems((prev) => prev.filter((item) => item.id !== id));
     showToast("🗑️ Impian berhasil dihapus!");
 
     await supabase.from("bucket_list").delete().eq("id", id);
+    fetchAllData();
   };
 
   return (

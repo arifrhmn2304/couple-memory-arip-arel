@@ -39,8 +39,8 @@ export default function BottomNav({ activeTab, setActiveTab }: BottomNavProps) {
 
   return (
     <div 
-      className={`fixed left-1/2 -translate-x-1/2 z-50 w-[95%] max-w-sm transition-all duration-500 ease-in-out ${
-        isVisible ? "bottom-15 opacity-100 translate-y-0" : "-bottom-24 opacity-0 translate-y-10"
+      className={`fixed left-1/2 -translate-x-1/2 z-50 w-[92%] max-w-md transition-all duration-500 ease-in-out ${
+        isVisible ? "bottom-6 opacity-100 translate-y-0" : "-bottom-24 opacity-0 translate-y-10"
       }`}
     >
       <nav className="bg-slate-900/90 backdrop-blur-2xl border border-sky-500/30 p-2 rounded-3xl shadow-2xl shadow-black/90 flex items-center justify-around">

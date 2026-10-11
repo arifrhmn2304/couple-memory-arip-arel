@@ -4,7 +4,7 @@
 import { useState, ChangeEvent } from "react";
 import { motion } from "framer-motion";
 import dynamic from "next/dynamic";
-import { Sparkles, X, Camera, MapPin, Map, Navigation, Lock } from "lucide-react";
+import { Sparkles, X, Camera, MapPin, Map, Navigation, Lock, Calendar, FlipHorizontal } from "lucide-react";
 
 const InteractivePickerMap = dynamic(() => import("./InteractivePickerMap"), {
   ssr: false,
@@ -44,10 +44,24 @@ export default function AddMemoryModal({
   const [locationName, setLocationName] = useState("");
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  
+  // State untuk tanggal kustom (default ke tanggal hari ini dalam format YYYY-MM-DD)
+  const todayStr = new Date().toISOString().split("T")[0];
+  const [customDate, setCustomDate] = useState<string>(todayStr);
+
   const [showMapPicker, setShowMapPicker] = useState(false);
   const [isGettingGPS, setIsGettingGPS] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
 
   if (!isOpen) return null;
+
+  // Variabel pengunci: Semua harus terisi baru bernilai TRUE
+  const isFormValid = Boolean(
+    imagePreview && 
+    caption.trim() !== "" && 
+    locationName.trim() !== "" && 
+    coords !== null
+  );
 
   const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -56,6 +70,28 @@ export default function AddMemoryModal({
       reader.onloadend = () => setImagePreview(reader.result as string);
       reader.readAsDataURL(file);
     }
+  };
+
+  // Fungsi untuk Mirror Foto (membalik orientasi horizontal foto)
+  const handleMirrorImage = () => {
+    if (!imagePreview) return;
+    const img = new Image();
+    img.src = imagePreview;
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+      
+      // Balik posisi secara horizontal
+      ctx.translate(canvas.width, 0);
+      ctx.scale(-1, 1);
+      ctx.drawImage(img, 0, 0);
+      
+      setImagePreview(canvas.toDataURL("image/jpeg"));
+      if (onShowToast) onShowToast("🔄 Foto berhasil di-mirror!");
+    };
   };
 
   const handleGetCurrentLocation = () => {
@@ -86,6 +122,36 @@ export default function AddMemoryModal({
     );
   };
 
+  const handleSearchLocation = async () => {
+    if (!locationName.trim()) return;
+    setIsSearching(true);
+    
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(locationName)}`
+      );
+      const data = await response.json();
+      
+      if (data && data.length > 0) {
+        const lat = parseFloat(data[0].lat);
+        const lng = parseFloat(data[0].lon);
+        
+        setCoords({ lat, lng });
+        setShowMapPicker(true);
+        
+        if (onShowToast) {
+          onShowToast(`📍 Ketemu! ${data[0].display_name.substring(0, 30)}...`);
+        }
+      } else {
+        if (onShowToast) onShowToast("❌ Lokasi tidak ditemukan. Coba nama yang lebih spesifik.");
+      }
+    } catch (error) {
+      if (onShowToast) onShowToast("⚠️ Gagal mencari lokasi karena masalah jaringan.");
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
   const handleSelectCoordsFromMap = (selectedLat: number, selectedLng: number, placeName?: string) => {
     setCoords({ lat: selectedLat, lng: selectedLng });
     if (placeName) setLocationName(placeName);
@@ -97,12 +163,28 @@ export default function AddMemoryModal({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!imagePreview || !caption.trim()) {
-      if (onShowToast) onShowToast("⚠️ Harap pilih foto dan isi cerita momen!");
+    
+    // Validasi satu per satu dengan ketat
+    if (!imagePreview) {
+      if (onShowToast) onShowToast("⚠️ Harap pilih foto momen kalian!");
+      return;
+    }
+    if (!locationName.trim()) {
+      if (onShowToast) onShowToast("⚠️ Harap isi Nama Tempat / Lokasi!");
+      return;
+    }
+    if (!coords || typeof coords.lat === "undefined" || typeof coords.lng === "undefined") {
+      if (onShowToast) onShowToast("📍 Harap kunci lokasi (GPS) terlebih dahulu!");
+      return;
+    }
+    if (!caption.trim()) {
+      if (onShowToast) onShowToast("⚠️ Harap isi cerita momen kalian!");
       return;
     }
 
-    const todayFormatted = new Date().toLocaleDateString("id-ID", {
+    // Format tanggal kustom yang dipilih (misal: "11 Oktober 2026")
+    const dateObj = new Date(customDate);
+    const formattedDate = dateObj.toLocaleDateString("id-ID", {
       day: "numeric",
       month: "short",
       year: "numeric",
@@ -112,12 +194,12 @@ export default function AddMemoryModal({
       id: Date.now().toString(),
       author: "Memory Our",
       avatar: "⚡",
-      date: todayFormatted,
-      location: locationName.trim() || "Padang, Sumatera Barat",
+      date: formattedDate, // Sesuai tanggal pilihan kamu sendiri!
+      location: locationName.trim(),
       imageUrl: imagePreview,
       caption: caption,
-      lat: coords?.lat,
-      lng: coords?.lng,
+      lat: coords.lat,
+      lng: coords.lng,
     };
 
     onAddMemory(newMemory);
@@ -126,6 +208,7 @@ export default function AddMemoryModal({
     setLocationName("");
     setCoords(null);
     setImagePreview(null);
+    setCustomDate(todayStr);
     setShowMapPicker(false);
     onClose();
   };
@@ -158,9 +241,21 @@ export default function AddMemoryModal({
         </div>
 
         <form className="space-y-3.5" onSubmit={handleSubmit}>
-          {/* Form Foto Upload */}
+          {/* Form Foto Upload & Tombol Mirror */}
           <div>
-            <label className="text-xs font-bold text-slate-200 block mb-1">Foto Memory</label>
+            <div className="flex justify-between items-center mb-1">
+              <label className="text-xs font-bold text-slate-200">Foto Memory <span className="text-red-400">*</span></label>
+              {imagePreview && (
+                <button
+                  type="button"
+                  onClick={handleMirrorImage}
+                  className="text-[10px] bg-slate-800 hover:bg-slate-700 text-sky-400 font-bold px-2.5 py-1 rounded-lg border border-slate-700 flex items-center gap-1 transition cursor-pointer"
+                >
+                  <FlipHorizontal className="w-3.5 h-3.5" /> Mirror Foto
+                </button>
+              )}
+            </div>
+
             <label className="relative border-2 border-dashed border-sky-500/30 rounded-2xl p-2 text-center hover:border-sky-400 transition cursor-pointer bg-slate-950 flex flex-col items-center justify-center min-h-[130px] max-h-[200px] overflow-hidden">
               <input type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
               {imagePreview ? (
@@ -175,10 +270,29 @@ export default function AddMemoryModal({
             </label>
           </div>
 
+          {/* PILIH TANGGAL KUSTOM (Bisa atur tanggal lalu kalau lupa upload) */}
+          <div>
+            <label className="text-xs font-bold text-slate-200 block mb-1">
+              Tanggal Kenangan <span className="text-red-400">*</span>
+            </label>
+            <div className="relative flex items-center">
+              <Calendar className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="date"
+                value={customDate}
+                onChange={(e) => setCustomDate(e.target.value)}
+                className="w-full text-xs pl-9 pr-3 py-2.5 rounded-xl border border-slate-700 focus:outline-none focus:border-sky-400 bg-slate-950 text-white shadow-inner"
+              />
+            </div>
+            <p className="text-[10px] text-slate-400 mt-1">
+              *Ubah tanggal ini jika kamu baru meng-upload foto kenangan hari sebelumnya.
+            </p>
+          </div>
+
           {/* Form Lokasi */}
           <div>
             <div className="flex justify-between items-center mb-1">
-              <label className="text-xs font-bold text-slate-200">Nama Tempat / Lokasi</label>
+              <label className="text-xs font-bold text-slate-200">Nama Tempat / Lokasi <span className="text-red-400">*</span></label>
               {coords && (
                 <span className="text-[10px] bg-emerald-950 text-emerald-400 font-bold px-2 py-0.5 rounded-full border border-emerald-500/30 flex items-center gap-1">
                   <Lock className="w-3 h-3" /> Pin Terkunci
@@ -187,15 +301,31 @@ export default function AddMemoryModal({
             </div>
 
             <div className="space-y-2">
-              <div className="relative">
+              <div className="relative flex items-center">
                 <MapPin className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
-                  placeholder="Contoh: Famss Clothing"
+                  placeholder="Ketik lokasi... (contoh: Jam Gadang)"
                   value={locationName}
                   onChange={(e) => setLocationName(e.target.value)}
-                  className="w-full text-xs pl-9 pr-3.5 py-2.5 rounded-xl border border-slate-700 focus:outline-none focus:border-sky-400 bg-slate-950 text-white placeholder:text-slate-400 shadow-inner"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleSearchLocation();
+                    }
+                  }}
+                  className="w-full text-xs pl-9 pr-16 py-2.5 rounded-xl border border-slate-700 focus:outline-none focus:border-sky-400 bg-slate-950 text-white placeholder:text-slate-400 shadow-inner"
                 />
+                
+                {/* Tombol Cari */}
+                <button 
+                  type="button" 
+                  onClick={handleSearchLocation}
+                  disabled={isSearching || !locationName.trim()}
+                  className="absolute right-1.5 top-1/2 -translate-y-1/2 bg-sky-500/20 text-sky-400 px-2.5 py-1.5 rounded-lg text-[10px] font-bold hover:bg-sky-500/40 transition disabled:opacity-50 cursor-pointer"
+                >
+                  {isSearching ? "Mencari.." : "Cari"}
+                </button>
               </div>
 
               {/* 2 PILIHAN PENENTUAN LOKASI */}
@@ -239,7 +369,7 @@ export default function AddMemoryModal({
 
           {/* Form Cerita */}
           <div>
-            <label className="text-xs font-bold text-slate-200 block mb-1">Cerita Memory</label>
+            <label className="text-xs font-bold text-slate-200 block mb-1">Cerita Memory <span className="text-red-400">*</span></label>
             <textarea
               rows={3}
               placeholder="Tulis kenangan manis hari ini..."
@@ -249,12 +379,17 @@ export default function AddMemoryModal({
             />
           </div>
 
-          {/* Tombol Simpan */}
+          {/* Tombol Simpan (Kunci Mati 100%) */}
           <button
             type="submit"
-            className="w-full bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white font-bold py-3 rounded-xl text-xs shadow-lg shadow-sky-500/25 transition active:scale-95 cursor-pointer border border-sky-400/40"
+            disabled={!isFormValid}
+            className={`w-full font-bold py-3 rounded-xl text-xs shadow-lg transition duration-300 border ${
+              isFormValid 
+                ? "bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white shadow-sky-500/25 border-sky-400/40 cursor-pointer active:scale-95" 
+                : "bg-slate-800 text-slate-500 border-slate-700 cursor-not-allowed opacity-70"
+            }`}
           >
-            ⚡ Simpan Memory
+            {isFormValid ? "⚡ Simpan Memory" : "Lengkapi Semua Data Terlebih Dahulu"}
           </button>
         </form>
       </motion.div>

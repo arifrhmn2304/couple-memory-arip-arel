@@ -1,7 +1,7 @@
 // components/CalendarTimeline.tsx
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence, PanInfo } from "framer-motion";
 import { X, Download } from "lucide-react";
@@ -24,8 +24,18 @@ interface MonthData {
 export default function CalendarTimeline({ memories = [], onShowToast }: CalendarTimelineProps) {
   const [activeMemory, setActiveMemory] = useState<MemoryItem | null>(null);
   const [isMounted, setIsMounted] = useState(false);
+  
+  const currentMonthRef = useRef<HTMLDivElement | null>(null);
 
-  useEffect(() => setIsMounted(true), []);
+  useEffect(() => {
+    setIsMounted(true);
+    const timer = setTimeout(() => {
+      if (currentMonthRef.current) {
+        currentMonthRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+    }, 100);
+    return () => clearTimeout(timer);
+  }, []);
 
   const timelineMonths = useMemo(() => {
     const monthsList: MonthData[] = [];
@@ -114,60 +124,71 @@ export default function CalendarTimeline({ memories = [], onShowToast }: Calenda
 
   return (
     <>
-      <div className="relative w-full max-w-sm mx-auto px-4 pb-32 overflow-y-auto no-scrollbar min-h-[70vh]">
-        <div className="absolute top-10 bottom-20 left-1/2 -translate-x-1/2 w-0 border-l-2 border-dashed border-slate-700/50 -z-10" />
+      <div className="w-full px-4 pb-32 space-y-6 overflow-y-auto no-scrollbar">
+        {timelineMonths.map((monthData, monthIndex) => {
+          const days = Array.from({ length: monthData.daysInMonth }, (_, i) => i + 1);
+          
+          const currentDate = new Date();
+          const isCurrentMonth = monthData.monthIndex === currentDate.getMonth() && monthData.year === currentDate.getFullYear();
+          const currentDayNum = currentDate.getDate();
 
-        <div className="space-y-10 pt-4">
-          {timelineMonths.map((monthData, monthIndex) => {
-            const days = Array.from({ length: monthData.daysInMonth }, (_, i) => i + 1);
-            
-            return (
-              <div 
-                key={monthIndex} 
-                className="bg-[#1c1c1e] backdrop-blur-md rounded-[32px] p-6 shadow-2xl border border-white/5 relative z-10"
-              >
-                <h3 className="text-white font-bold text-sm mb-6">{monthData.title}</h3>
-                
-                <div className="grid grid-cols-7 gap-y-5 gap-x-2 place-items-center">
-                  {Array.from({ length: monthData.startDayOffset }).map((_, i) => (
-                    <div key={`empty-${i}`} className="w-1.5 h-1.5" />
-                  ))}
-
-                  {days.map((day) => {
-                    const memoryForThisDay = memories.find((mem) => {
-                      if (!mem.date) return false;
-                      const dateStr = mem.date.toLowerCase();
-                      const dateParts = dateStr.split(/\s+/);
-                      const exactDayMatch = dateParts.includes(day.toString());
-                      const hasMonthKeyword = monthData.monthKeywords.some((keyword) => dateStr.includes(keyword));
-                      const hasYear = dateStr.includes(monthData.year.toString());
-
-                      return exactDayMatch && hasMonthKeyword && hasYear;
-                    });
-
-                    const hasMemory = !!memoryForThisDay;
-                    const memoryImg = memoryForThisDay?.imageUrl;
-
-                    return (
-                      <div key={day} className="flex items-center justify-center w-8 h-8">
-                        {hasMemory && memoryForThisDay ? (
-                          <div 
-                            onClick={() => setActiveMemory(memoryForThisDay)}
-                            className="w-8 h-8 rounded-xl overflow-hidden border border-sky-500/50 shadow-lg shadow-sky-900/30 cursor-pointer hover:scale-110 transition-transform z-20"
-                          >
-                            <img src={memoryImg} alt="Memory" className="w-full h-full object-cover" />
-                          </div>
-                        ) : (
-                          <div className="w-1.5 h-1.5 rounded-full bg-slate-700" />
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
+          return (
+            <div 
+              key={monthIndex}
+              ref={isCurrentMonth ? currentMonthRef : null}
+              className="bg-slate-900/95 backdrop-blur-xl rounded-[32px] p-5 shadow-2xl border border-sky-500/20 relative z-10 w-full overflow-hidden"
+            >
+              {/* EFEK 2 KOTAK / 3D BANNER UNTUK NAMA BULAN */}
+              <div className="mb-5 bg-slate-950/60 backdrop-blur-md px-4 py-3 rounded-2xl border border-white/10 shadow-[inset_0_2px_4px_rgba(255,255,255,0.06),0_10px_20px_rgba(0,0,0,0.4)] flex items-center justify-between">
+                <h3 className="text-white font-bold text-sm tracking-wide">
+                  {monthData.title}
+                </h3>
               </div>
-            );
-          })}
-        </div>
+              
+              <div className="grid grid-cols-7 gap-3 place-items-center">
+                {Array.from({ length: monthData.startDayOffset }).map((_, i) => (
+                  <div key={`empty-${i}`} className="w-11 h-11" />
+                ))}
+
+                {days.map((day) => {
+                  const memoryForThisDay = memories.find((mem) => {
+                    if (!mem.date) return false;
+                    const dateStr = mem.date.toLowerCase();
+                    const dateParts = dateStr.split(/\s+/);
+                    const exactDayMatch = dateParts.includes(day.toString());
+                    const hasMonthKeyword = monthData.monthKeywords.some((keyword) => dateStr.includes(keyword));
+                    const hasYear = dateStr.includes(monthData.year.toString());
+
+                    return exactDayMatch && hasMonthKeyword && hasYear;
+                  });
+
+                  const hasMemory = !!memoryForThisDay;
+                  const isPastDayInCurrentMonth = isCurrentMonth && day < currentDayNum;
+                  const isPastMonth = monthData.year < currentDate.getFullYear() || (monthData.year === currentDate.getFullYear() && monthData.monthIndex < currentDate.getMonth());
+
+                  return (
+                    <div key={day} className="flex items-center justify-center w-full aspect-square">
+                      {hasMemory && memoryForThisDay ? (
+                        <div 
+                          onClick={() => setActiveMemory(memoryForThisDay)}
+                          className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl overflow-hidden border-2 border-sky-400 shadow-lg shadow-sky-500/40 cursor-pointer hover:scale-105 transition-transform z-20 bg-slate-950 shrink-0"
+                        >
+                          <img src={memoryForThisDay.imageUrl} alt="Memory" className="w-full h-full object-cover" />
+                        </div>
+                      ) : isPastMonth || isPastDayInCurrentMonth ? (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <div className="w-3 h-3 rounded-full bg-slate-700/80 border border-slate-600/50 shadow-inner" />
+                        </div>
+                      ) : (
+                        <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-slate-950/60 border border-slate-800/80 shadow-inner shrink-0" />
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
         
         <div className="h-32 w-full shrink-0 pointer-events-none"></div>
       </div>
@@ -182,7 +203,6 @@ export default function CalendarTimeline({ memories = [], onShowToast }: Calenda
               transition={{ duration: 0.2 }}
               className="fixed inset-0 z-[9999] bg-slate-950/95 backdrop-blur-2xl flex flex-col justify-between p-4 overflow-hidden"
             >
-              {/* HEADER ATAS */}
               <div className="flex items-center justify-between w-full max-w-md mx-auto pt-4 px-2 z-10">
                 <button
                   onClick={() => setActiveMemory(null)}
@@ -196,7 +216,6 @@ export default function CalendarTimeline({ memories = [], onShowToast }: Calenda
                   <h4 className="text-sm font-bold text-white tracking-wide">{activeMemory.date}</h4>
                 </div>
 
-                {/* Tombol Simpan/Download Saja (Tanpa Hapus) */}
                 <button
                   onClick={() => handleDownload(activeMemory.imageUrl)}
                   className="text-white bg-slate-800/80 hover:bg-slate-700 p-3 rounded-full transition shadow-xl border border-slate-700 cursor-pointer"
@@ -206,7 +225,6 @@ export default function CalendarTimeline({ memories = [], onShowToast }: Calenda
                 </button>
               </div>
 
-              {/* AREA FOTO UTAMA */}
               <div className="relative flex-1 flex items-center justify-center p-2 max-w-lg mx-auto w-full">
                 <motion.div
                   key={activeMemory.id}
@@ -231,7 +249,6 @@ export default function CalendarTimeline({ memories = [], onShowToast }: Calenda
                 </motion.div>
               </div>
 
-              {/* CAROUSEL THUMBNAIL DI BAWAH */}
               <div className="w-full max-w-md mx-auto pb-6 pt-2">
                 <p className="text-[10px] text-slate-400 text-center mb-2 font-semibold">Geser atau pilih foto lainnya</p>
                 <div className="flex items-center justify-center gap-3 overflow-x-auto no-scrollbar px-2">

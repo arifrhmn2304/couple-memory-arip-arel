@@ -21,7 +21,7 @@ interface MemoryMapProps {
 
 export default function MemoryMap({ memories }: MemoryMapProps) {
   return (
-    <div className="w-full max-w-sm mx-auto px-4 pb-32 space-y-4">
+    <div className="w-full px-4 pb-32 space-y-4">
       {/* Header Info Peta */}
       <div className="bg-slate-900/95 backdrop-blur-2xl rounded-[28px] p-4 border border-sky-500/25 shadow-2xl shadow-sky-950/80 flex items-center justify-between">
         <div className="flex items-center gap-3">

@@ -26,7 +26,7 @@ export default function MemoryFeed({ memories = [], onDeleteMemory, onShowToast 
 
   if (memories.length === 0) {
     return (
-      <div className="w-full max-w-sm mx-auto px-4">
+      <div className="w-full px-4 pb-24 space-y-4">
         <div className="bg-slate-900/90 backdrop-blur-xl p-8 rounded-3xl border border-dashed border-sky-500/30 text-center space-y-3 h-[65vh] flex flex-col items-center justify-center shadow-2xl">
           <span className="text-5xl animate-bounce">📸</span>
           <h4 className="text-sm font-bold text-white">Belum Ada Momen Tersimpan</h4>

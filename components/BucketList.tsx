@@ -69,7 +69,7 @@ export default function BucketList({
   };
 
   return (
-    <div className="w-full max-w-md mx-auto px-4 pb-24 space-y-4">
+    <div className="w-full px-4 pb-24 space-y-4">
       {/* Banner Title */}
       <div className="bg-gradient-to-br from-slate-900/95 via-slate-900/80 to-blue-950/90 backdrop-blur-2xl p-4 rounded-3xl border border-sky-500/30 shadow-xl flex items-center justify-between">
         <div>
