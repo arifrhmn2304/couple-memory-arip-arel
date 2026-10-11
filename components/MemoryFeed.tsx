@@ -24,12 +24,8 @@ export default function MemoryFeed({ memories = [], onDeleteMemory, onShowToast 
     setIsMounted(true);
   }, []);
 
-  // URUTKAN BERDASARKAN TANGGAL KENANGAN (TERBARU PALING ATAS)
-  const sortedMemories = [...memories].sort((a, b) => {
-    const dateA = new Date(a.date).getTime();
-    const dateB = new Date(b.date).getTime();
-    return dateB - dateA; // Urutkan dari tanggal terbaru ke terlama
-  });
+  // URUTKAN BERDASARKAN ID / TIMESTAMP TERBARU (DIJAMIN PALING AKURAT KE ATAS)
+  const sortedMemories = [...memories].sort((a, b) => Number(b.id) - Number(a.id));
 
   if (sortedMemories.length === 0) {
     return (
