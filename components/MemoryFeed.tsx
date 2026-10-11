@@ -24,8 +24,8 @@ export default function MemoryFeed({ memories = [], onDeleteMemory, onShowToast 
     setIsMounted(true);
   }, []);
 
-  // URUTKAN BERDASARKAN ID / TIMESTAMP TERBARU (DIJAMIN PALING AKURAT KE ATAS)
-  const sortedMemories = [...memories].sort((a, b) => Number(b.id) - Number(a.id));
+  // URUTKAN DARI TERBARU KE TERLAMA (MOMEN TERBARU DI POSISI PALING ATAS)
+  const sortedMemories = [...memories].sort((a, b) => Number(a.id) - Number(b.id));
 
   if (sortedMemories.length === 0) {
     return (
