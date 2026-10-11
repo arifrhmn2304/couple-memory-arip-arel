@@ -24,7 +24,14 @@ export default function MemoryFeed({ memories = [], onDeleteMemory, onShowToast 
     setIsMounted(true);
   }, []);
 
-  if (memories.length === 0) {
+  // URUTKAN BERDASARKAN TANGGAL KENANGAN (TERBARU PALING ATAS)
+  const sortedMemories = [...memories].sort((a, b) => {
+    const dateA = new Date(a.date).getTime();
+    const dateB = new Date(b.date).getTime();
+    return dateB - dateA; // Urutkan dari tanggal terbaru ke terlama
+  });
+
+  if (sortedMemories.length === 0) {
     return (
       <div className="w-full pb-24 space-y-4">
         <div className="bg-slate-900/90 backdrop-blur-xl p-8 rounded-3xl border border-dashed border-sky-500/30 text-center space-y-3 h-[60vh] flex flex-col items-center justify-center shadow-2xl">
@@ -75,17 +82,17 @@ export default function MemoryFeed({ memories = [], onDeleteMemory, onShowToast 
   };
 
   const handleNextPhoto = () => {
-    if (!activeMemory || memories.length <= 1) return;
-    const currentIndex = memories.findIndex((m) => m.id === activeMemory.id);
-    const nextIndex = (currentIndex + 1) % memories.length;
-    setActiveMemory(memories[nextIndex]);
+    if (!activeMemory || sortedMemories.length <= 1) return;
+    const currentIndex = sortedMemories.findIndex((m) => m.id === activeMemory.id);
+    const nextIndex = (currentIndex + 1) % sortedMemories.length;
+    setActiveMemory(sortedMemories[nextIndex]);
   };
 
   const handlePrevPhoto = () => {
-    if (!activeMemory || memories.length <= 1) return;
-    const currentIndex = memories.findIndex((m) => m.id === activeMemory.id);
-    const prevIndex = (currentIndex - 1 + memories.length) % memories.length;
-    setActiveMemory(memories[prevIndex]);
+    if (!activeMemory || sortedMemories.length <= 1) return;
+    const currentIndex = sortedMemories.findIndex((m) => m.id === activeMemory.id);
+    const prevIndex = (currentIndex - 1 + sortedMemories.length) % sortedMemories.length;
+    setActiveMemory(sortedMemories[prevIndex]);
   };
 
   const handleDragEnd = (event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
@@ -100,8 +107,8 @@ export default function MemoryFeed({ memories = [], onDeleteMemory, onShowToast 
 
   return (
     <>
-      <div className="w-full pb-32 space-y-6 overflow-y-auto no-scrollbar">
-        {memories.map((item) => (
+      <div className="w-full pb-24 space-y-6 overflow-y-auto no-scrollbar">
+        {sortedMemories.map((item) => (
           <div
             key={item.id}
             onTouchStart={() => handleTouchStart(item.id)}
@@ -151,7 +158,7 @@ export default function MemoryFeed({ memories = [], onDeleteMemory, onShowToast 
           </div>
         ))}
         
-        <div className=" w-full shrink-0 pointer-events-none"></div>
+        <div className="h-12 w-full shrink-0 pointer-events-none"></div>
       </div>
 
       {isMounted && createPortal(
