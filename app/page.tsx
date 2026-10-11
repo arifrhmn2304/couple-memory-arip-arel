@@ -27,7 +27,6 @@ export default function Home() {
     setTimeout(() => setToastMessage(null), 3000);
   };
 
-  // Fungsi untuk menarik data terbaru dari Supabase
   const fetchAllData = async () => {
     try {
       const { data: memData } = await supabase
@@ -63,20 +62,19 @@ export default function Home() {
     }
   };
 
-  // 1. BACA CACHE LOKAL & SETUP REALTIME SUPABASE
   useEffect(() => {
+    // Bersihkan localStorage yang kepenuhan jika ada
     try {
-      const cachedMemories = window.localStorage.getItem("our_memories_cache");
-      if (cachedMemories) setMemories(JSON.parse(cachedMemories));
-
-      const cachedBucket = window.localStorage.getItem("our_bucket_cache");
-      if (cachedBucket) setBucketItems(JSON.parse(cachedBucket));
+      window.localStorage.removeItem("our_memories_cache");
     } catch (e) {
-      console.warn("Gagal baca cache lokal:", e);
+      // ignore
     }
 
-    setIsAppReady(true);
-    fetchAllData();
+    fetchAllData().finally(() => {
+      setTimeout(() => {
+        setIsAppReady(true);
+      }, 600);
+    });
 
     const channel = supabase
       .channel("schema-db-changes")
@@ -97,28 +95,6 @@ export default function Home() {
     };
   }, []);
 
-  // 2. SIMPAN CACHE KE HP
-  useEffect(() => {
-    if (isAppReady) {
-      try {
-        window.localStorage.setItem("our_memories_cache", JSON.stringify(memories));
-      } catch (error) {
-        console.warn("Gagal menyimpan cache memori:", error);
-      }
-    }
-  }, [memories, isAppReady]);
-
-  useEffect(() => {
-    if (isAppReady) {
-      try {
-        window.localStorage.setItem("our_bucket_cache", JSON.stringify(bucketItems));
-      } catch (error) {
-        console.warn("Gagal menyimpan cache bucket:", error);
-      }
-    }
-  }, [bucketItems, isAppReady]);
-
-  // 4. Tambah Memory & Simpan ke Supabase
   const handleAddMemory = async (newMemory: MemoryItem) => {
     setMemories((prev) => [newMemory, ...prev]);
     showToast("✨ Memory indah kalian berhasil disimpan!");
@@ -138,13 +114,12 @@ export default function Home() {
     ]);
 
     if (error) {
-      showToast("⚠️ Gagal menyimpan ke server, tersimpan lokal.");
+      showToast("⚠️ Gagal menyimpan ke server.");
     } else {
       fetchAllData();
     }
   };
 
-  // 5. Hapus Memory dari Supabase
   const handleDeleteMemory = async (id: string) => {
     setMemories((prev) => prev.filter((item) => item.id !== id));
     showToast("🗑️ Kenangan berhasil dihapus!");
@@ -153,7 +128,6 @@ export default function Home() {
     fetchAllData();
   };
 
-  // 6. Tambah Bucket List & Simpan ke Supabase
   const handleAddItem = async (newItem: BucketItem) => {
     setBucketItems((prev) => [newItem, ...prev]);
     showToast("🎯 Impian baru berhasil ditambahkan!");
@@ -169,7 +143,6 @@ export default function Home() {
     fetchAllData();
   };
 
-  // 7. Update Status Checklist ke Supabase
   const handleToggleItem = async (id: string) => {
     const targetItem = bucketItems.find((item) => item.id === id);
     if (!targetItem) return;
@@ -188,7 +161,6 @@ export default function Home() {
       .eq("id", id);
   };
 
-  // 8. Hapus Bucket List dari Supabase
   const handleDeleteItem = async (id: string) => {
     setBucketItems((prev) => prev.filter((item) => item.id !== id));
     showToast("🗑️ Impian berhasil dihapus!");
@@ -199,12 +171,47 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-slate-950 text-white relative overflow-x-hidden select-none flex flex-col items-center">
+      
+      {/* SPLASH SCREEN / ANIMASI PEMBUKA DENGAN LOGO KUSTOM */}
+      <AnimatePresence>
+        {!isAppReady && (
+          <motion.div
+            initial={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.5, ease: "easeInOut" }}
+            className="fixed inset-0 z-[99999] bg-slate-950 flex flex-col items-center justify-center p-6 select-none"
+          >
+            <div className="relative flex flex-col items-center space-y-5">
+              <div className="absolute w-28 h-28 bg-sky-500/25 rounded-full blur-2xl animate-pulse" />
+              
+              <motion.div
+                animate={{ scale: [1, 1.1, 1], rotate: [0, 3, -3, 0] }}
+                transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
+                className="relative z-10 w-24 h-24 rounded-[32px] overflow-hidden shadow-2xl shadow-sky-950 border border-sky-500/30 flex items-center justify-center bg-slate-900"
+              >
+                <img
+                  src="/icon-512.png"
+                  alt="Our Memories Logo"
+                  className="w-full h-full object-cover"
+                />
+              </motion.div>
+
+              <div className="text-center space-y-1.5 z-10">
+                <h1 className="text-base font-black tracking-widest text-white">OUR MEMORIES</h1>
+                <p className="text-[11px] text-sky-400 font-medium tracking-[0.2em] uppercase animate-pulse">
+                  Loading Our Story...
+                </p>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div className="fixed top-[-100px] left-1/2 -translate-x-1/2 w-[500px] h-[300px] bg-sky-500/10 blur-[120px] pointer-events-none rounded-full z-0" />
       <div className="fixed bottom-[-50px] right-[-50px] w-[300px] h-[300px] bg-blue-600/10 blur-[100px] pointer-events-none rounded-full z-0" />
 
       <Toast message={toastMessage} onClose={() => setToastMessage(null)} />
 
-      {/* KONTAINER UTAMA TERKUNCI UKURANNYA AGAR SERAGAM DAN RESPONSIF */}
       <div className="relative z-10 w-full max-w-md mx-auto flex flex-col min-h-screen px-4 pb-28">
         <DashboardHeader />
 
