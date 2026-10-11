@@ -24,8 +24,48 @@ export default function MemoryFeed({ memories = [], onDeleteMemory, onShowToast 
     setIsMounted(true);
   }, []);
 
-  // URUTKAN DARI TERBARU KE TERLAMA (MOMEN TERBARU DI POSISI PALING ATAS)
-  const sortedMemories = [...memories].sort((a, b) => Number(a.id) - Number(b.id));
+  // FUNGSI HELPER UNTUK KONVERSI TANGGAL INDONESIA KE TIMESTAMP ANGKA
+  const parseIndonesianDate = (dateStr: string) => {
+    if (!dateStr) return 0;
+    
+    // Kamus nama bulan Indonesia (singkatan & lengkap)
+    const months: { [key: string]: number } = {
+      jan: 0, januari: 0,
+      feb: 1, februari: 1,
+      mar: 2, maret: 2,
+      apr: 3, april: 3,
+      mei: 4,
+      jun: 5, juni: 5,
+      jul: 6, juli: 6,
+      agu: 7, agustus: 7, agt: 7,
+      sep: 8, september: 8, sept: 8,
+      okt: 9, oktober: 9,
+      nov: 10, november: 10,
+      des: 11, desember: 11
+    };
+
+    const parts = dateStr.toLowerCase().replace(/,/g, "").split(/\s+/);
+    // Contoh format: ["11", "okt", "2026"] atau ["11", "oktober", "2026"]
+    if (parts.length >= 3) {
+      const day = parseInt(parts[0], 10) || 1;
+      const monthStr = parts[1];
+      const year = parseInt(parts[2], 10) || new Date().getFullYear();
+      
+      const month = months[monthStr] !== undefined ? months[monthStr] : 0;
+      return new Date(year, month, day).getTime();
+    }
+
+    // Fallback jika format standar
+    const parsed = new Date(dateStr).getTime();
+    return isNaN(parsed) ? 0 : parsed;
+  };
+
+  // URUTKAN MURNI BERDASARKAN TANGGAL KENANGAN ASLI (TERBARU DI ATAS)
+  const sortedMemories = [...memories].sort((a, b) => {
+    const timeA = parseIndonesianDate(a.date);
+    const timeB = parseIndonesianDate(b.date);
+    return timeB - timeA; // Dari tanggal terbaru ke terlama
+  });
 
   if (sortedMemories.length === 0) {
     return (
